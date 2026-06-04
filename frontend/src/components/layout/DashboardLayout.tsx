@@ -47,9 +47,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="flex h-16 items-center gap-2 border-b border-black/[0.06] px-6">
         <Link to="/" className="flex items-center gap-2" onClick={onNavigate}>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black">
-            <span className="text-xs font-bold text-white">P</span>
+            <span className="text-[10px] font-bold text-white sm:text-xs">O</span>
           </div>
-          <span className="font-semibold tracking-tight text-black">PropIQ</span>
+          <span className="truncate font-semibold tracking-tight text-black">OffmarketStream</span>
         </Link>
       </div>
 

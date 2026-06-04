@@ -21,7 +21,7 @@ export function AdminUsersPage() {
 
       <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
         <Shield className="mt-0.5 h-4 w-4 shrink-0" />
-        This page is only accessible when logged in as admin@propiq.com / admin123
+        This page is only accessible when logged in as admin@offmarketstream.com / admin123
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">

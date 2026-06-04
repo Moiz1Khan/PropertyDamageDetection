@@ -214,6 +214,6 @@ export const adminUsers = [
   { id: 'u1', name: 'Alex Morgan', email: 'alex@investor.com', role: 'Investor', status: 'Active', joined: '2025-08-12' },
   { id: 'u2', name: 'Sarah Chen', email: 'sarah@agent.com', role: 'Agent', status: 'Active', joined: '2025-09-03' },
   { id: 'u3', name: 'Mike Torres', email: 'mike@investor.com', role: 'Investor', status: 'Active', joined: '2025-10-21' },
-  { id: 'u4', name: 'Admin User', email: 'admin@propiq.com', role: 'Admin', status: 'Active', joined: '2025-06-01' },
+  { id: 'u4', name: 'Admin User', email: 'admin@offmarketstream.com', role: 'Admin', status: 'Active', joined: '2025-06-01' },
   { id: 'u5', name: 'James Wright', email: 'james@lender.com', role: 'Lender', status: 'Pending', joined: '2026-02-28' },
 ]

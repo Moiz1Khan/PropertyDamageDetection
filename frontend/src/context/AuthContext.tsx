@@ -9,19 +9,19 @@ interface AuthAccount {
 
 export const DEMO_ACCOUNTS: AuthAccount[] = [
   {
-    email: 'demo@propiq.com',
+    email: 'demo@offmarketstream.com',
     password: 'demo123',
-    user: { id: 'u1', name: 'Alex Morgan', email: 'demo@propiq.com', role: 'investor' },
+    user: { id: 'u1', name: 'Alex Morgan', email: 'demo@offmarketstream.com', role: 'investor' },
   },
   {
-    email: 'agent@propiq.com',
+    email: 'agent@offmarketstream.com',
     password: 'agent123',
-    user: { id: 'u2', name: 'Sarah Chen', email: 'agent@propiq.com', role: 'agent' },
+    user: { id: 'u2', name: 'Sarah Chen', email: 'agent@offmarketstream.com', role: 'agent' },
   },
   {
-    email: 'admin@propiq.com',
+    email: 'admin@offmarketstream.com',
     password: 'admin123',
-    user: { id: 'u4', name: 'Admin User', email: 'admin@propiq.com', role: 'admin' },
+    user: { id: 'u4', name: 'Admin User', email: 'admin@offmarketstream.com', role: 'admin' },
   },
 ]
 
@@ -34,7 +34,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const STORAGE_KEY = 'propiq_auth_user'
+const STORAGE_KEY = 'offmarketstream_auth_user'
 
 function loadStoredUser(): User | null {
   try {

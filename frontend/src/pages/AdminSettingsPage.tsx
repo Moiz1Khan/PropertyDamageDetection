@@ -31,7 +31,7 @@ export function AdminSettingsPage() {
           </div>
           <div className="mt-6 space-y-4">
             <Input label="Host" defaultValue="localhost:5432" />
-            <Input label="Database name" defaultValue="propiq_db" />
+            <Input label="Database name" defaultValue="offmarketstream_db" />
             <Input label="Connection pool size" type="number" defaultValue="10" />
           </div>
         </Card>

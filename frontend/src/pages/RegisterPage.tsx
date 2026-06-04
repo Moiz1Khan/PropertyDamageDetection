@@ -10,7 +10,7 @@ export function RegisterPage() {
 
   const handleDemoRegister = (e: React.FormEvent) => {
     e.preventDefault()
-    const result = login('demo@propiq.com', 'demo123')
+    const result = login('demo@offmarketstream.com', 'demo123')
     if (result.ok) navigate('/dashboard')
   }
 
@@ -20,9 +20,9 @@ export function RegisterPage() {
         <div className="absolute inset-0 grainy-gradient-warm opacity-90" />
         <Link to="/" className="relative flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white">
-            <span className="text-xs font-bold text-black">P</span>
+            <span className="text-[10px] font-bold text-black sm:text-xs">O</span>
           </div>
-          <span className="text-lg font-semibold text-white">PropIQ</span>
+          <span className="text-lg font-semibold text-white">OffmarketStream</span>
         </Link>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h2 className="text-4xl font-semibold leading-tight text-white">
@@ -34,16 +34,16 @@ export function RegisterPage() {
             Create your account and start analyzing properties with AI in minutes.
           </p>
         </motion.div>
-        <p className="relative text-xs text-white/50">© 2026 PropIQ</p>
+        <p className="relative text-xs text-white/50">© 2026 OffmarketStream</p>
       </div>
 
       <div className="flex flex-1 flex-col justify-center px-4 py-10 sm:px-6 sm:py-12 lg:px-16">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mx-auto w-full max-w-md">
           <Link to="/" className="mb-8 flex items-center gap-2 lg:hidden">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black">
-              <span className="text-xs font-bold text-white">P</span>
+              <span className="text-[10px] font-bold text-white sm:text-xs">O</span>
             </div>
-            <span className="font-semibold text-black">PropIQ</span>
+            <span className="font-semibold text-black">OffmarketStream</span>
           </Link>
 
           <h1 className="text-2xl font-semibold tracking-tight text-black">Create account</h1>

@@ -109,7 +109,7 @@ export function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
-            <p className="mb-3 text-sm font-medium text-app-muted sm:mb-4">PropIQ</p>
+            <p className="mb-3 text-sm font-medium text-app-muted sm:mb-4">OffmarketStream</p>
             <h1 className="text-[1.75rem] font-semibold leading-[1.12] tracking-tight text-black sm:text-4xl sm:leading-[1.08] lg:text-[3.5rem]">
               Analyze properties that talk, type, and deliver insights
             </h1>
@@ -290,7 +290,7 @@ export function LandingPage() {
           <p className="mx-auto mt-4 max-w-lg text-app-muted">
             Free demo — log in with pre-configured accounts to explore every page.
           </p>
-          <p className="mt-2 text-xs text-app-muted">demo@propiq.com / demo123</p>
+          <p className="mt-2 text-xs text-app-muted">demo@offmarketstream.com / demo123</p>
           <div className="mt-8 flex w-full flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             <Button variant="primary" size="lg" to="/login" className="w-full sm:w-auto">
               Get started

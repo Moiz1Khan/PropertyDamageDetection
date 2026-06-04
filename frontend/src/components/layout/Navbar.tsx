@@ -27,9 +27,9 @@ export function Navbar() {
       >
         <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black">
-            <span className="text-xs font-bold text-white">P</span>
+            <span className="text-[10px] font-bold text-white sm:text-xs">O</span>
           </div>
-          <span className="truncate text-[15px] font-semibold tracking-tight text-black">PropIQ</span>
+          <span className="truncate text-[13px] font-semibold tracking-tight text-black sm:text-[15px]">OffmarketStream</span>
         </Link>
 
         {!isAuth && (

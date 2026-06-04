@@ -11,7 +11,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
-  const [email, setEmail] = useState('demo@propiq.com')
+  const [email, setEmail] = useState('demo@offmarketstream.com')
   const [password, setPassword] = useState('demo123')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -47,9 +47,9 @@ export function LoginPage() {
         <div className="absolute inset-0 grainy-gradient-mint opacity-90" />
         <Link to="/" className="relative flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white">
-            <span className="text-xs font-bold text-black">P</span>
+            <span className="text-[10px] font-bold text-black sm:text-xs">O</span>
           </div>
-          <span className="text-lg font-semibold text-white">PropIQ</span>
+          <span className="text-lg font-semibold text-white">OffmarketStream</span>
         </Link>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -65,7 +65,7 @@ export function LoginPage() {
             AI-powered property analysis — damage detection, deal metrics, and ranked investment insights.
           </p>
         </motion.div>
-        <p className="relative text-xs text-white/50">© 2026 PropIQ</p>
+        <p className="relative text-xs text-white/50">© 2026 OffmarketStream</p>
       </div>
 
       <div className="flex flex-1 flex-col justify-center px-4 py-10 sm:px-6 sm:py-12 lg:px-16">
@@ -76,9 +76,9 @@ export function LoginPage() {
         >
           <Link to="/" className="mb-8 flex items-center gap-2 lg:hidden">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black">
-              <span className="text-xs font-bold text-white">P</span>
+              <span className="text-[10px] font-bold text-white sm:text-xs">O</span>
             </div>
-            <span className="font-semibold text-black">PropIQ</span>
+            <span className="font-semibold text-black">OffmarketStream</span>
           </Link>
 
           <h1 className="text-2xl font-semibold tracking-tight text-black">Log in</h1>

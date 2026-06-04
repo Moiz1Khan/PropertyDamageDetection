@@ -10,9 +10,9 @@ export function Footer() {
             <div className="col-span-2 md:col-span-1">
               <Link to="/" className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black">
-                  <span className="text-xs font-bold text-white">P</span>
+                  <span className="text-[10px] font-bold text-white sm:text-xs">O</span>
                 </div>
-                <span className="text-lg font-semibold text-black">PropIQ</span>
+                <span className="text-lg font-semibold text-black">OffmarketStream</span>
               </Link>
               <p className="mt-4 text-sm leading-relaxed text-app-muted">
                 AI-powered real estate investment analysis. From damage detection to deal ranking.
@@ -39,7 +39,7 @@ export function Footer() {
           </div>
         </FadeIn>
         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-black/[0.06] pt-8 md:flex-row">
-          <p className="text-xs text-app-muted">© 2026 PropIQ. FCCU COMP497A Final Year Project.</p>
+          <p className="text-xs text-app-muted">© 2026 OffmarketStream. FCCU COMP497A Final Year Project.</p>
           <p className="text-xs text-app-muted">AI Real Estate Investment Analyzer</p>
         </div>
       </div>
