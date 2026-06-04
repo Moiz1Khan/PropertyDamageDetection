@@ -13,7 +13,7 @@ interface StatCardProps {
 export function StatCard({ label, value, change, positive, icon: Icon, index = 0 }: StatCardProps) {
   return (
     <motion.div
-      className="glass-card-hover rounded-[24px] p-6"
+      className="glass-card-hover rounded-[20px] p-4 sm:rounded-[24px] sm:p-6"
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
@@ -21,7 +21,7 @@ export function StatCard({ label, value, change, positive, icon: Icon, index = 0
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-app-muted">{label}</p>
-          <p className="mt-2 text-3xl font-semibold tracking-tight text-black">{value}</p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-black sm:text-3xl">{value}</p>
           {change && (
             <p className={`mt-1 text-xs ${positive ? 'text-emerald-600' : 'text-red-600'}`}>
               {change}

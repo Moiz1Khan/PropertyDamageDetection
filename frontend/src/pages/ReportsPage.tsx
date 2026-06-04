@@ -56,12 +56,12 @@ export function ReportsPage() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" size="sm">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button variant="secondary" size="sm" className="w-full sm:w-auto">
                 <Eye className="h-4 w-4" />
                 Preview
               </Button>
-              <Button variant="primary" size="sm">
+              <Button variant="primary" size="sm" className="w-full sm:w-auto">
                 <Download className="h-4 w-4" />
                 Download PDF
               </Button>

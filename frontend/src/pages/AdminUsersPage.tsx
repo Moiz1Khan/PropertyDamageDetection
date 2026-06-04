@@ -43,8 +43,8 @@ export function AdminUsersPage() {
         />
       </div>
 
-      <Card className="overflow-x-auto p-0">
-        <table className="w-full text-sm">
+      <Card className="table-scroll p-0">
+        <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-black/[0.06] bg-app-elevated text-left text-app-muted">
               <th className="p-4 font-medium">Name</th>

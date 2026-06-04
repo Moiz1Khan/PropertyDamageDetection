@@ -51,10 +51,10 @@ export function RankingsPage() {
       <div className="space-y-4">
         {ranked.map((p, index) => (
           <Link key={p.id} to={`/dashboard/properties/${p.id}`}>
-            <Card hover className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-4">
+            <Card hover className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-6">
+              <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
                 <div
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-semibold ${
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-semibold sm:h-12 sm:w-12 sm:text-lg ${
                     index === 0
                       ? 'bg-amber-100 text-amber-700'
                       : index === 1
@@ -67,9 +67,9 @@ export function RankingsPage() {
                 <img
                   src={p.imageUrl}
                   alt={p.address}
-                  className="h-16 w-24 rounded-lg object-cover"
+                  className="h-14 w-20 shrink-0 rounded-lg object-cover sm:h-16 sm:w-24"
                 />
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="font-medium text-black">{p.address}</p>
                   <p className="text-sm text-app-muted">
                     {p.city}, {p.state} · {formatCurrency(p.listPrice)}
@@ -81,7 +81,7 @@ export function RankingsPage() {
                 </div>
               </div>
 
-              <div className="flex flex-1 flex-wrap items-center gap-6 sm:justify-end">
+              <div className="grid grid-cols-2 gap-4 sm:flex sm:flex-1 sm:flex-wrap sm:items-center sm:justify-end sm:gap-6">
                 <div className="text-center">
                   <p className="text-xs text-app-muted">Score</p>
                   <p className="text-xl font-semibold text-black">{p.rankScore}</p>

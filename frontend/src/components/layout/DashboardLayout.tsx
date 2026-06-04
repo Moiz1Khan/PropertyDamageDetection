@@ -180,7 +180,7 @@ export function DashboardLayout() {
       </AnimatePresence>
 
       <div className="flex flex-1 flex-col lg:pl-64">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-black/[0.06] bg-app-bg/90 px-6 backdrop-blur-xl">
+        <header className="sticky top-0 z-30 flex h-14 min-h-14 items-center gap-3 border-b border-black/[0.06] bg-app-bg/90 px-4 backdrop-blur-xl sm:h-16 sm:gap-4 sm:px-6">
           <button type="button" className="text-app-muted lg:hidden" onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5" />
           </button>
@@ -199,7 +199,7 @@ export function DashboardLayout() {
           </Link>
         </header>
 
-        <main className="flex-1 p-6 lg:p-8">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <PageTransition>
             <Outlet />
           </PageTransition>

@@ -17,28 +17,30 @@ export function PropertiesPage() {
             {mockProperties.length} properties · {mockProperties.filter((p) => p.status === 'complete').length} analyses complete
           </p>
         </div>
-        <Button variant="primary" to="/dashboard/properties/new">
+        <Button variant="primary" to="/dashboard/properties/new" className="w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           Add Property
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 lg:flex-row">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative min-w-0 flex-1">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-muted" />
           <input
             placeholder="Search by address, city, or ZIP..."
             className="w-full rounded-xl border border-black/10 bg-app-surface py-3 pl-11 pr-4 text-sm text-black outline-none focus:border-black/20"
           />
         </div>
-        <Button variant="secondary">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:gap-3">
+        <Button variant="secondary" className="w-full">
           <Filter className="h-4 w-4" />
           Filters
         </Button>
-        <Button variant="secondary">
+        <Button variant="secondary" className="w-full">
           <SlidersHorizontal className="h-4 w-4" />
           Sort by ROI
         </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -65,7 +67,7 @@ export function PropertiesPage() {
                 <div className="absolute right-3 top-3">
                   <StatusBadge status={p.status} />
                 </div>
-                <div className="absolute bottom-3 left-3 rounded-full bg-black/70 px-2.5 py-1 text-xs font-medium text-black">
+                <div className="absolute bottom-3 left-3 rounded-full bg-black/70 px-2.5 py-1 text-xs font-medium text-white">
                   Score {p.rankScore}
                 </div>
               </div>

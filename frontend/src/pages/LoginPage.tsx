@@ -68,7 +68,7 @@ export function LoginPage() {
         <p className="relative text-xs text-white/50">© 2026 PropIQ</p>
       </div>
 
-      <div className="flex flex-1 flex-col justify-center px-6 py-12 lg:px-16">
+      <div className="flex flex-1 flex-col justify-center px-4 py-10 sm:px-6 sm:py-12 lg:px-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -110,13 +110,13 @@ export function LoginPage() {
               {DEMO_ACCOUNTS.map((acc) => (
                 <div
                   key={acc.email}
-                  className="flex items-center justify-between rounded-2xl border border-black/[0.06] bg-app-elevated px-4 py-3"
+                  className="flex flex-col gap-3 rounded-2xl border border-black/[0.06] bg-app-elevated px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <button type="button" onClick={() => fillCredentials(acc.email, acc.password)} className="min-w-0 flex-1 text-left">
                     <p className="text-sm font-medium text-black">{acc.user.name}</p>
-                    <p className="text-xs text-app-muted">{acc.email} · {roleLabel(acc.user.role)}</p>
+                    <p className="break-all text-xs text-app-muted sm:break-normal">{acc.email} · {roleLabel(acc.user.role)}</p>
                   </button>
-                  <button type="button" onClick={() => copyCreds(acc.email, acc.password)} className="rounded-lg p-2 text-app-muted hover:bg-black/[0.04]">
+                  <button type="button" onClick={() => copyCreds(acc.email, acc.password)} className="self-end rounded-lg p-2 text-app-muted hover:bg-black/[0.04] sm:self-auto">
                     {copied === acc.email ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
                   </button>
                 </div>

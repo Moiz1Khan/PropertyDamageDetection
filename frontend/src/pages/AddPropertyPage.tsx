@@ -79,8 +79,8 @@ export function AddPropertyPage() {
               />
             </div>
           </div>
-          <div className="mt-8 flex justify-end">
-            <Button variant="primary" onClick={() => setStep(2)}>
+          <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button variant="primary" onClick={() => setStep(2)} className="w-full sm:w-auto">
               Continue to images
             </Button>
           </div>
@@ -124,11 +124,11 @@ export function AddPropertyPage() {
             </div>
           </div>
 
-          <div className="mt-8 flex justify-between">
-            <Button variant="ghost" onClick={() => setStep(1)}>
+          <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+            <Button variant="ghost" onClick={() => setStep(1)} className="w-full sm:w-auto">
               Back
             </Button>
-            <Button variant="primary" onClick={() => navigate('/dashboard/properties/p1')}>
+            <Button variant="primary" onClick={() => navigate('/dashboard/properties/p1')} className="w-full sm:w-auto">
               Run Analysis
             </Button>
           </div>

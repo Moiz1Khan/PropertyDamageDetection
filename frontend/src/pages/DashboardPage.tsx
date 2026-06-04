@@ -49,7 +49,7 @@ export function DashboardPage() {
             {user ? `${roleLabel(user.role)} dashboard` : 'Your investment pipeline at a glance'}
           </p>
         </div>
-        <Button variant="primary" to="/dashboard/properties/new">
+        <Button variant="primary" to="/dashboard/properties/new" className="w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           New Analysis
         </Button>
@@ -100,24 +100,31 @@ export function DashboardPage() {
               <Link
                 key={p.id}
                 to={`/dashboard/properties/${p.id}`}
-                className="flex items-center gap-4 rounded-xl border border-black/[0.06] bg-app-elevated p-4 transition-all hover:border-black/10 hover:shadow-sm"
+                className="flex flex-col gap-3 rounded-xl border border-black/[0.06] bg-app-elevated p-4 transition-all hover:border-black/10 hover:shadow-sm sm:flex-row sm:items-center sm:gap-4"
               >
+                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                 <img
                   src={p.imageUrl}
                   alt={p.address}
-                  className="h-14 w-20 rounded-lg object-cover"
+                  className="h-14 w-20 shrink-0 rounded-lg object-cover"
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-black">{p.address}</p>
                   <p className="text-sm text-app-muted">
                     {p.city}, {p.state} · {formatCurrency(p.listPrice)} · {p.beds}bd/{p.baths}ba
                   </p>
+                  <p className="mt-1 text-sm font-medium text-emerald-600 sm:hidden">
+                    {formatPercent(p.roi)} ROI · {strategyLabels[p.strategy]}
+                  </p>
                 </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 sm:justify-end">
                 <div className="hidden text-right sm:block">
                   <p className="text-sm font-medium text-emerald-600">{formatPercent(p.roi)} ROI</p>
                   <p className="text-xs text-app-muted">{strategyLabels[p.strategy]}</p>
                 </div>
                 <StatusBadge status={p.status} />
+                </div>
               </Link>
             ))}
           </div>

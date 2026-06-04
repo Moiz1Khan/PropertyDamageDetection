@@ -45,9 +45,9 @@ export function PropertyDetailPage() {
           Back to properties
         </Link>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight text-black">{property.address}</h1>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="text-xl font-semibold tracking-tight text-black sm:text-2xl">{property.address}</h1>
               <StatusBadge status={property.status} />
               <Badge variant="info">Score {property.rankScore}/100</Badge>
             </div>
@@ -71,11 +71,11 @@ export function PropertyDetailPage() {
               </span>
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" to="/dashboard/compare">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button variant="secondary" to="/dashboard/compare" className="w-full sm:w-auto">
               Compare
             </Button>
-            <Button variant="primary">
+            <Button variant="primary" className="w-full sm:w-auto">
               <Download className="h-4 w-4" />
               Download Report
             </Button>
@@ -105,7 +105,7 @@ export function PropertyDetailPage() {
             <img
               src={property.imageUrl}
               alt={property.address}
-              className="aspect-[21/9] w-full object-cover"
+              className="aspect-[4/3] w-full object-cover sm:aspect-[21/9]"
             />
           </div>
 
@@ -121,13 +121,13 @@ export function PropertyDetailPage() {
               {property.damages.map((d, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between rounded-xl border border-black/[0.06] bg-app-elevated px-4 py-3"
+                  className="flex flex-col gap-3 rounded-xl border border-black/[0.06] bg-app-elevated px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-black">{d.type}</p>
                     <p className="text-xs text-app-muted">{d.room}</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <div className="hidden w-24 sm:block">
                       <div className="h-1.5 overflow-hidden rounded-full bg-black/[0.04]">
                         <div
@@ -168,8 +168,8 @@ export function PropertyDetailPage() {
           <Card>
             <h2 className="font-medium text-black">Comparable Properties</h2>
             <p className="mt-1 text-sm text-app-muted">Sales within 0.5 miles, last 6 months</p>
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="table-scroll">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="border-b border-black/[0.06] text-left text-app-muted">
                     <th className="pb-3 font-medium">Address</th>

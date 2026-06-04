@@ -65,8 +65,9 @@ export function ComparePage() {
       </div>
 
       {compared.length >= 2 ? (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full min-w-[700px] text-sm">
+        <div className="table-scroll">
+        <Card className="min-w-[640px] overflow-hidden p-0 sm:min-w-0">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-black/[0.06] bg-app-elevated">
                 <th className="p-4 text-left font-medium text-app-muted">Metric</th>
@@ -118,6 +119,7 @@ export function ComparePage() {
             </tbody>
           </table>
         </Card>
+        </div>
       ) : (
         <Card className="py-16 text-center">
           <p className="text-app-muted">Select at least 2 properties to compare</p>

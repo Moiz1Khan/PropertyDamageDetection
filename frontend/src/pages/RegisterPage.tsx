@@ -37,7 +37,7 @@ export function RegisterPage() {
         <p className="relative text-xs text-white/50">© 2026 PropIQ</p>
       </div>
 
-      <div className="flex flex-1 flex-col justify-center px-6 py-12 lg:px-16">
+      <div className="flex flex-1 flex-col justify-center px-4 py-10 sm:px-6 sm:py-12 lg:px-16">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mx-auto w-full max-w-md">
           <Link to="/" className="mb-8 flex items-center gap-2 lg:hidden">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black">

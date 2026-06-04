@@ -27,10 +27,11 @@
 
   html {
     @apply scroll-smooth antialiased;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
-    @apply bg-app-bg font-sans text-app-text;
+    @apply overflow-x-hidden bg-app-bg font-sans text-app-text;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
@@ -115,6 +116,14 @@
 
   .gradient-text {
     @apply bg-gradient-to-r from-black via-neutral-700 to-neutral-500 bg-clip-text text-transparent;
+  }
+
+  .page-x {
+    @apply px-4 sm:px-6;
+  }
+
+  .table-scroll {
+    @apply -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0;
   }
 }
 

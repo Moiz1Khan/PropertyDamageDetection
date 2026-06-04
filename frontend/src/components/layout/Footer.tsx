@@ -4,10 +4,10 @@ import { FadeIn } from '../motion/FadeIn'
 export function Footer() {
   return (
     <footer className="border-t border-black/[0.06] bg-white">
-      <div className="mx-auto max-w-7xl px-6 py-16">
+      <div className="mx-auto max-w-7xl page-x py-12 sm:py-16">
         <FadeIn>
-          <div className="grid gap-12 md:grid-cols-4">
-            <div className="md:col-span-1">
+          <div className="grid grid-cols-2 gap-8 sm:gap-12 md:grid-cols-4">
+            <div className="col-span-2 md:col-span-1">
               <Link to="/" className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black">
                   <span className="text-xs font-bold text-white">P</span>

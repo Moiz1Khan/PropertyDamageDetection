@@ -42,7 +42,7 @@ function ChatMockup() {
   ]
 
   return (
-    <div className="flex flex-col gap-3 p-6 md:p-8">
+    <div className="flex flex-col gap-3 p-4 sm:p-6 md:p-8">
       {messages.map((m, i) => (
         <motion.div
           key={i}
@@ -67,7 +67,7 @@ function ChatMockup() {
 
 function ChartMockup() {
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-4 sm:p-6 md:p-8">
       <div className="rounded-2xl bg-white p-5 shadow-sm">
         <p className="text-xs font-medium text-app-muted">Average ROI</p>
         <p className="mt-1 text-3xl font-semibold tracking-tight text-black">19.4%</p>
@@ -102,18 +102,18 @@ export function LandingPage() {
       <Navbar />
 
       {/* Hero — ElevenAgents split layout */}
-      <section className="mx-auto max-w-7xl px-6 pb-8 pt-28 md:pt-32">
-        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 lg:items-end">
+      <section className="mx-auto max-w-7xl page-x pb-8 pt-24 sm:pt-28 md:pt-32">
+        <div className="grid gap-8 sm:gap-12 lg:grid-cols-2 lg:items-end lg:gap-16">
           <motion.div
             initial={{ opacity: 0, y: 32 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
-            <p className="mb-4 text-sm font-medium text-app-muted">PropIQ</p>
-            <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight text-black sm:text-5xl lg:text-[3.5rem]">
+            <p className="mb-3 text-sm font-medium text-app-muted sm:mb-4">PropIQ</p>
+            <h1 className="text-[1.75rem] font-semibold leading-[1.12] tracking-tight text-black sm:text-4xl sm:leading-[1.08] lg:text-[3.5rem]">
               Analyze properties that talk, type, and deliver insights
             </h1>
-            <Button variant="primary" size="lg" to="/login" className="mt-8">
+            <Button variant="primary" size="lg" to="/login" className="mt-6 w-full sm:mt-8 sm:w-auto">
               Learn more
             </Button>
           </motion.div>
@@ -122,7 +122,7 @@ export function LandingPage() {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.15 }}
-            className="max-w-md text-base leading-relaxed text-app-muted lg:pb-2"
+            className="max-w-md text-sm leading-relaxed text-app-muted sm:text-base lg:pb-2"
           >
             Configure, upload, and monitor AI-powered property analysis in minutes — from computer
             vision damage detection to deal metrics, comps, and ranked investment reports.
@@ -130,13 +130,13 @@ export function LandingPage() {
         </div>
 
         {/* Hero feature cards */}
-        <div id="platform" className="mt-16 grid gap-5 lg:grid-cols-2">
+        <div id="platform" className="mt-10 grid gap-4 sm:mt-16 sm:gap-5 lg:grid-cols-2">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
-            className="feature-card grainy-gradient-mint min-h-[380px]"
+            className="feature-card grainy-gradient-mint min-h-[300px] sm:min-h-[380px]"
           >
             <p className="px-6 pt-6 text-sm font-medium text-white/80 md:px-8 md:pt-8">
               Property analysis flow
@@ -149,7 +149,7 @@ export function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className="feature-card bg-app-muted-bg min-h-[380px]"
+            className="feature-card bg-app-muted-bg min-h-[300px] sm:min-h-[380px]"
           >
             <p className="px-6 pt-6 text-sm font-medium text-app-muted md:px-8 md:pt-8">
               Deal performance
@@ -162,21 +162,21 @@ export function LandingPage() {
       <Marquee items={marqueeItems} />
 
       {/* Glass hero banner — WoodNest-inspired */}
-      <section className="mx-auto max-w-7xl px-6 py-20">
+      <section className="mx-auto max-w-7xl page-x py-12 sm:py-20">
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="relative overflow-hidden rounded-[32px] grainy-gradient-hero"
+          className="relative overflow-hidden rounded-[24px] grainy-gradient-hero sm:rounded-[32px]"
         >
           <div className="absolute inset-0 bg-black/20" />
-          <div className="relative grid gap-8 p-8 md:grid-cols-2 md:items-center md:p-12 lg:p-16">
+          <div className="relative grid gap-8 p-6 sm:p-8 md:grid-cols-2 md:items-center md:p-12 lg:p-16">
             <div>
               <div className="mb-4 flex items-center gap-2 text-white/90">
                 <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
                 <span className="text-sm font-medium">4.9 from 200+ analyses</span>
               </div>
-              <h2 className="text-3xl font-semibold leading-tight tracking-tight text-white sm:text-4xl">
+              <h2 className="text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl md:text-4xl">
                 Nature&apos;s not required —
                 <br />
                 just smarter deals
@@ -187,7 +187,7 @@ export function LandingPage() {
               </p>
             </div>
 
-            <div className="glass-dark rounded-[24px] p-6 md:p-7">
+            <div className="glass-dark rounded-[20px] p-5 sm:rounded-[24px] sm:p-6 md:p-7">
               <p className="font-medium text-white">1842 Oakwood Drive</p>
               <p className="mt-1 text-sm text-white/60">Austin, TX · Single Family</p>
               <div className="mt-5 grid grid-cols-2 gap-3">
@@ -200,12 +200,12 @@ export function LandingPage() {
                   <p className="text-sm font-medium">$298,000</p>
                 </div>
               </div>
-              <div className="mt-4 flex items-center justify-between">
+              <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-2xl font-semibold text-emerald-300">23.8% ROI</p>
                   <p className="text-xs text-white/50">Score 92/100</p>
                 </div>
-                <Button variant="white" size="md" to="/login">
+                <Button variant="white" size="md" to="/login" className="w-full sm:w-auto">
                   Reserve analysis
                 </Button>
               </div>
@@ -215,9 +215,9 @@ export function LandingPage() {
       </section>
 
       {/* Features grid */}
-      <section id="features" className="mx-auto max-w-7xl px-6 py-24">
+      <section id="features" className="mx-auto max-w-7xl page-x py-16 sm:py-24">
         <FadeIn className="max-w-2xl">
-          <h2 className="text-3xl font-semibold tracking-tight text-black sm:text-4xl">
+          <h2 className="text-2xl font-semibold tracking-tight text-black sm:text-3xl md:text-4xl">
             One platform for the full analysis pipeline
           </h2>
           <p className="mt-4 text-app-muted">
@@ -259,12 +259,12 @@ export function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" className="border-y border-black/[0.06] bg-white py-24">
-        <div className="mx-auto max-w-7xl px-6">
+      <section id="how-it-works" className="border-y border-black/[0.06] bg-white py-16 sm:py-24">
+        <div className="mx-auto max-w-7xl page-x">
           <FadeIn>
-            <h2 className="text-3xl font-semibold tracking-tight text-black">How it works</h2>
+            <h2 className="text-2xl font-semibold tracking-tight text-black sm:text-3xl">How it works</h2>
           </FadeIn>
-          <StaggerContainer className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          <StaggerContainer className="mt-10 grid gap-8 sm:mt-16 sm:grid-cols-2 sm:gap-10 lg:grid-cols-4">
             {[
               { n: '01', t: 'Upload property', d: 'Address, price, beds/baths, and photos.' },
               { n: '02', t: 'AI analyzes', d: 'CV damage scan + ML estimates.' },
@@ -282,21 +282,21 @@ export function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section id="pricing" className="mx-auto max-w-7xl px-6 py-24">
-        <FadeIn className="rounded-[32px] bg-app-muted-bg px-8 py-16 text-center md:px-16">
-          <h2 className="text-3xl font-semibold tracking-tight text-black sm:text-4xl">
+      <section id="pricing" className="mx-auto max-w-7xl page-x py-16 sm:py-24">
+        <FadeIn className="rounded-[24px] bg-app-muted-bg px-5 py-12 text-center sm:rounded-[32px] sm:px-8 sm:py-16 md:px-16">
+          <h2 className="text-2xl font-semibold tracking-tight text-black sm:text-3xl md:text-4xl">
             Start analyzing deals today
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-app-muted">
             Free demo — log in with pre-configured accounts to explore every page.
           </p>
           <p className="mt-2 text-xs text-app-muted">demo@propiq.com / demo123</p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button variant="primary" size="lg" to="/login">
+          <div className="mt-8 flex w-full flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+            <Button variant="primary" size="lg" to="/login" className="w-full sm:w-auto">
               Get started
               <ArrowRight className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="lg" to="/login">
+            <Button variant="outline" size="lg" to="/login" className="w-full sm:w-auto">
               Log in
             </Button>
           </div>
