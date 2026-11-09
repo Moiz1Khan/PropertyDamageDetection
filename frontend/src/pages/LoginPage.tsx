@@ -19,11 +19,11 @@ export function LoginPage() {
 
   const from = (location.state as { from?: string })?.from ?? '/dashboard'
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const result = login(email, password)
+    const result = await login(email, password)
     setLoading(false)
     if (result.ok) navigate(from, { replace: true })
     else setError(result.error)
@@ -51,11 +51,7 @@ export function LoginPage() {
           </div>
           <span className="text-lg font-semibold text-white">OffmarketStream</span>
         </Link>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative">
           <h2 className="text-4xl font-semibold leading-tight tracking-tight text-white">
             Analyze smarter.
             <br />
@@ -69,11 +65,7 @@ export function LoginPage() {
       </div>
 
       <div className="flex flex-1 flex-col justify-center px-4 py-10 sm:px-6 sm:py-12 lg:px-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mx-auto w-full max-w-md"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mx-auto w-full max-w-md">
           <Link to="/" className="mb-8 flex items-center gap-2 lg:hidden">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black">
               <span className="text-[10px] font-bold text-white sm:text-xs">O</span>
@@ -98,7 +90,13 @@ export function LoginPage() {
 
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <Input
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
             <Button variant="primary" size="lg" type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing in...' : 'Log in'}
             </Button>
@@ -112,12 +110,26 @@ export function LoginPage() {
                   key={acc.email}
                   className="flex flex-col gap-3 rounded-2xl border border-black/[0.06] bg-app-elevated px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <button type="button" onClick={() => fillCredentials(acc.email, acc.password)} className="min-w-0 flex-1 text-left">
+                  <button
+                    type="button"
+                    onClick={() => fillCredentials(acc.email, acc.password)}
+                    className="min-w-0 flex-1 text-left"
+                  >
                     <p className="text-sm font-medium text-black">{acc.user.name}</p>
-                    <p className="break-all text-xs text-app-muted sm:break-normal">{acc.email} · {roleLabel(acc.user.role)}</p>
+                    <p className="break-all text-xs text-app-muted sm:break-normal">
+                      {acc.email} · {roleLabel(acc.user.role)}
+                    </p>
                   </button>
-                  <button type="button" onClick={() => copyCreds(acc.email, acc.password)} className="self-end rounded-lg p-2 text-app-muted hover:bg-black/[0.04] sm:self-auto">
-                    {copied === acc.email ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                  <button
+                    type="button"
+                    onClick={() => copyCreds(acc.email, acc.password)}
+                    className="self-end rounded-lg p-2 text-app-muted hover:bg-black/[0.04] sm:self-auto"
+                  >
+                    {copied === acc.email ? (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               ))}

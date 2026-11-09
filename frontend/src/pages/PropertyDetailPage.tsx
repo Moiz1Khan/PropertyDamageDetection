@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -13,13 +14,10 @@ import {
   Ruler,
   Bed,
   Bath,
+  RefreshCw,
 } from 'lucide-react'
-import {
-  mockProperties,
-  formatCurrency,
-  formatPercent,
-  strategyLabels,
-} from '../data/mockData'
+import { formatCurrency, formatPercent, strategyLabels } from '../data/mockData'
+import { api, type ApiProperty } from '../lib/api'
 
 const severityVariant = {
   low: 'success' as const,
@@ -29,7 +27,50 @@ const severityVariant = {
 
 export function PropertyDetailPage() {
   const { id } = useParams()
-  const property = mockProperties.find((p) => p.id === id) ?? mockProperties[0]
+  const [property, setProperty] = useState<ApiProperty | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const load = () => {
+    if (!id) return
+    setLoading(true)
+    api
+      .property(id)
+      .then(setProperty)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(load, [id])
+
+  const reanalyze = async () => {
+    if (!id) return
+    setBusy(true)
+    try {
+      const res = await api.analyze(id)
+      setProperty(res.property)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Re-analysis failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const download = async () => {
+    if (!id) return
+    setBusy(true)
+    try {
+      await api.downloadReport(id)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Download failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (loading) return <p className="text-sm text-app-muted">Loading property…</p>
+  if (!property) return <p className="text-sm text-red-600">{error || 'Property not found'}</p>
 
   const totalCost = property.listPrice + property.rehabCost
   const margin = property.arv - totalCost
@@ -48,7 +89,7 @@ export function PropertyDetailPage() {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <h1 className="text-xl font-semibold tracking-tight text-black sm:text-2xl">{property.address}</h1>
-              <StatusBadge status={property.status} />
+              <StatusBadge status={property.status as 'complete' | 'analyzing' | 'draft'} />
               <Badge variant="info">Score {property.rankScore}/100</Badge>
             </div>
             <p className="mt-2 flex flex-wrap items-center gap-4 text-sm text-app-muted">
@@ -72,16 +113,24 @@ export function PropertyDetailPage() {
             </p>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button variant="secondary" onClick={reanalyze} className="w-full sm:w-auto" disabled={busy}>
+              <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
+              Re-run AI
+            </Button>
             <Button variant="secondary" to="/dashboard/compare" className="w-full sm:w-auto">
               Compare
             </Button>
-            <Button variant="primary" className="w-full sm:w-auto">
+            <Button variant="primary" onClick={download} className="w-full sm:w-auto" disabled={busy}>
               <Download className="h-4 w-4" />
               Download Report
             </Button>
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
@@ -128,14 +177,6 @@ export function PropertyDetailPage() {
                     <p className="text-xs text-app-muted">{d.room}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <div className="hidden w-24 sm:block">
-                      <div className="h-1.5 overflow-hidden rounded-full bg-black/[0.04]">
-                        <div
-                          className="h-full rounded-full bg-amber-500"
-                          style={{ width: `${d.score * 100}%` }}
-                        />
-                      </div>
-                    </div>
                     <span className="text-xs text-app-muted">{(d.score * 100).toFixed(0)}%</span>
                     <Badge variant={severityVariant[d.severity]}>{d.severity}</Badge>
                   </div>
@@ -169,7 +210,7 @@ export function PropertyDetailPage() {
             <h2 className="font-medium text-black">Comparable Properties</h2>
             <p className="mt-1 text-sm text-app-muted">Sales within 0.5 miles, last 6 months</p>
             <div className="table-scroll">
-              <table className="w-full min-w-[640px] text-sm">
+              <table className="mt-4 w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="border-b border-black/[0.06] text-left text-app-muted">
                     <th className="pb-3 font-medium">Address</th>
@@ -199,33 +240,13 @@ export function PropertyDetailPage() {
 
         <div className="space-y-6">
           <Card>
-            <h2 className="font-medium text-black">Deal Summary</h2>
-            <div className="mt-4 space-y-4">
-              {[
-                { label: 'List Price', value: formatCurrency(property.listPrice) },
-                { label: 'Rehab Estimate', value: formatCurrency(property.rehabCost) },
-                { label: 'ARV', value: formatCurrency(property.arv) },
-                { label: 'Monthly Rent', value: formatCurrency(property.monthlyRent) },
-                { label: 'Max Offer', value: formatCurrency(property.maxOffer), highlight: true },
-                { label: 'Est. Profit', value: formatCurrency(property.profit), green: true },
-                { label: 'ROI', value: formatPercent(property.roi), green: true },
-              ].map(({ label, value, highlight, green }) => (
-                <div key={label} className="flex justify-between text-sm">
-                  <span className="text-app-muted">{label}</span>
-                  <span className={`font-medium ${green ? 'text-emerald-600' : highlight ? 'text-black font-semibold' : 'text-black'}`}>
-                    {value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
             <h2 className="flex items-center gap-2 font-medium text-black">
               <Target className="h-4 w-4" />
               Recommended Strategy
             </h2>
-            <p className="mt-3 text-lg font-medium text-black">{strategyLabels[property.strategy]}</p>
+            <p className="mt-3 text-lg font-medium text-black">
+              {strategyLabels[property.strategy as keyof typeof strategyLabels] ?? property.strategy}
+            </p>
             <p className="mt-2 text-sm text-app-muted">
               Based on ROI ({formatPercent(property.roi)}), {formatPercent(property.neighborhood.appreciation)} area
               appreciation, and rental yield of {formatCurrency(property.monthlyRent)}/mo.
@@ -248,9 +269,17 @@ export function PropertyDetailPage() {
               {[
                 { label: 'Median Price', value: formatCurrency(property.neighborhood.medianPrice) },
                 { label: 'Median Rent', value: `${formatCurrency(property.neighborhood.medianRent)}/mo` },
-                { label: 'YoY Appreciation', value: formatPercent(property.neighborhood.appreciation), green: true },
+                {
+                  label: 'YoY Appreciation',
+                  value: formatPercent(property.neighborhood.appreciation),
+                  green: true,
+                },
                 { label: 'School Rating', value: `${property.neighborhood.schoolRating}/10` },
-                { label: 'Crime Index', value: String(property.neighborhood.crimeIndex), warn: property.neighborhood.crimeIndex > 30 },
+                {
+                  label: 'Crime Index',
+                  value: String(property.neighborhood.crimeIndex),
+                  warn: property.neighborhood.crimeIndex > 30,
+                },
               ].map(({ label, value, green, warn }) => (
                 <div key={label} className="flex justify-between">
                   <span className="text-app-muted">{label}</span>
@@ -265,13 +294,18 @@ export function PropertyDetailPage() {
           <Card padding="sm">
             <h2 className="text-sm font-medium text-black">Analysis Timeline</h2>
             <div className="mt-3 space-y-2 text-xs text-app-muted">
-              <p>✓ Property data saved</p>
-              <p>✓ CV damage scan complete</p>
-              <p>✓ ML estimates generated</p>
-              <p>✓ Comps fetched ({property.comps.length})</p>
-              <p>✓ Deal metrics calculated</p>
-              {property.status === 'complete' && <p className="text-emerald-600">✓ Report ready</p>}
-              {property.status === 'analyzing' && <p className="text-blue-400">⋯ Analysis in progress...</p>}
+              {(property.analysisLog && property.analysisLog.length > 0
+                ? property.analysisLog
+                : [
+                    '✓ Property data saved',
+                    '✓ CV damage scan complete',
+                    '✓ ML estimates generated',
+                    '✓ Deal metrics calculated',
+                    '✓ Report ready',
+                  ]
+              ).map((line) => (
+                <p key={line}>{line}</p>
+              ))}
             </div>
           </Card>
         </div>

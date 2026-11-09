@@ -9,8 +9,16 @@ export function ProtectedRoute({
   children: React.ReactNode
   roles?: UserRole[]
 }) {
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, loading } = useAuth()
   const location = useLocation()
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-app-bg text-sm text-app-muted">
+        Loading OffmarketStream…
+      </div>
+    )
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />
@@ -24,7 +32,14 @@ export function ProtectedRoute({
 }
 
 export function GuestRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, loading } = useAuth()
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-app-bg text-sm text-app-muted">
+        Loading…
+      </div>
+    )
+  }
   if (isAuthenticated) return <Navigate to="/dashboard" replace />
   return children
 }

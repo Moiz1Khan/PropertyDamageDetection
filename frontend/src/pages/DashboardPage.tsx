@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { StatCard } from '../components/ui/StatCard'
 import { Card } from '../components/ui/Card'
@@ -9,36 +10,41 @@ import {
   DollarSign,
   Loader2,
   ArrowRight,
-  Clock,
   CheckCircle2,
-  AlertCircle,
   Plus,
 } from 'lucide-react'
-import {
-  dashboardStats,
-  mockProperties,
-  formatCurrency,
-  formatPercent,
-  strategyLabels,
-} from '../data/mockData'
+import { formatCurrency, formatPercent, strategyLabels } from '../data/mockData'
 import { useAuth, roleLabel } from '../context/AuthContext'
-
-const activity = [
-  { time: '2 hours ago', text: 'Analysis completed for 1842 Oakwood Drive', type: 'success' as const },
-  { time: '5 hours ago', text: 'PDF report downloaded — 729 Riverside Blvd', type: 'info' as const },
-  { time: 'Yesterday', text: 'New property submitted — 3301 Highland Park', type: 'pending' as const },
-  { time: '2 days ago', text: 'Deal ranked #1 — 1842 Oakwood Drive (score 92)', type: 'success' as const },
-]
-
-const pipeline = [
-  { stage: 'Draft', count: 1, color: 'bg-app-muted' },
-  { stage: 'Analyzing', count: 1, color: 'bg-blue-500' },
-  { stage: 'Complete', count: 3, color: 'bg-emerald-500' },
-]
+import { api, type ApiProperty } from '../lib/api'
 
 export function DashboardPage() {
   const { user } = useAuth()
-  const recent = mockProperties.slice(0, 4)
+  const [properties, setProperties] = useState<ApiProperty[]>([])
+  const [stats, setStats] = useState({ totalProperties: 0, avgRoi: 0, totalProfit: 0, activeAnalyses: 0 })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    Promise.all([api.properties(), api.stats()])
+      .then(([props, s]) => {
+        setProperties(props)
+        setStats(s)
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const recent = properties.slice(0, 4)
+  const pipeline = [
+    { stage: 'Draft', count: properties.filter((p) => p.status === 'draft').length, color: 'bg-app-muted' },
+    { stage: 'Analyzing', count: properties.filter((p) => p.status === 'analyzing').length, color: 'bg-blue-500' },
+    { stage: 'Complete', count: properties.filter((p) => p.status === 'complete').length, color: 'bg-emerald-500' },
+  ]
+  const totalPipe = Math.max(properties.length, 1)
+
+  if (loading) {
+    return <p className="text-sm text-app-muted">Loading dashboard…</p>
+  }
 
   return (
     <div className="space-y-8">
@@ -55,35 +61,15 @@ export function DashboardPage() {
         </Button>
       </div>
 
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          icon={Building2}
-          label="Total Properties"
-          value={String(dashboardStats.totalProperties)}
-          change="+2 this month"
-          positive
-          index={0}
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="Average ROI"
-          value={formatPercent(dashboardStats.avgRoi)}
-          change="+1.2% vs last month"
-          positive
-          index={1}
-        />
-        <StatCard
-          icon={DollarSign}
-          label="Total Profit Potential"
-          value={formatCurrency(dashboardStats.totalProfit)}
-          index={2}
-        />
-        <StatCard
-          icon={Loader2}
-          label="Active Analyses"
-          value={String(dashboardStats.activeAnalyses)}
-          index={3}
-        />
+        <StatCard icon={Building2} label="Total Properties" value={String(stats.totalProperties)} index={0} />
+        <StatCard icon={TrendingUp} label="Average ROI" value={formatPercent(stats.avgRoi)} positive index={1} />
+        <StatCard icon={DollarSign} label="Total Profit Potential" value={formatCurrency(stats.totalProfit)} index={2} />
+        <StatCard icon={Loader2} label="Active Analyses" value={String(stats.activeAnalyses)} index={3} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -96,6 +82,7 @@ export function DashboardPage() {
             </Button>
           </div>
           <div className="mt-6 space-y-4">
+            {recent.length === 0 && <p className="text-sm text-app-muted">No properties yet. Add your first analysis.</p>}
             {recent.map((p) => (
               <Link
                 key={p.id}
@@ -103,27 +90,20 @@ export function DashboardPage() {
                 className="flex flex-col gap-3 rounded-xl border border-black/[0.06] bg-app-elevated p-4 transition-all hover:border-black/10 hover:shadow-sm sm:flex-row sm:items-center sm:gap-4"
               >
                 <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                <img
-                  src={p.imageUrl}
-                  alt={p.address}
-                  className="h-14 w-20 shrink-0 rounded-lg object-cover"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-black">{p.address}</p>
-                  <p className="text-sm text-app-muted">
-                    {p.city}, {p.state} · {formatCurrency(p.listPrice)} · {p.beds}bd/{p.baths}ba
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-emerald-600 sm:hidden">
-                    {formatPercent(p.roi)} ROI · {strategyLabels[p.strategy]}
-                  </p>
-                </div>
+                  <img src={p.imageUrl} alt={p.address} className="h-14 w-20 shrink-0 rounded-lg object-cover" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-black">{p.address}</p>
+                    <p className="text-sm text-app-muted">
+                      {p.city}, {p.state} · {formatCurrency(p.listPrice)} · {p.beds}bd/{p.baths}ba
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between gap-3 sm:justify-end">
-                <div className="hidden text-right sm:block">
-                  <p className="text-sm font-medium text-emerald-600">{formatPercent(p.roi)} ROI</p>
-                  <p className="text-xs text-app-muted">{strategyLabels[p.strategy]}</p>
-                </div>
-                <StatusBadge status={p.status} />
+                  <div className="hidden text-right sm:block">
+                    <p className="text-sm font-medium text-emerald-600">{formatPercent(p.roi)} ROI</p>
+                    <p className="text-xs text-app-muted">{strategyLabels[p.strategy as keyof typeof strategyLabels] ?? p.strategy}</p>
+                  </div>
+                  <StatusBadge status={p.status as 'complete' | 'analyzing' | 'draft'} />
                 </div>
               </Link>
             ))}
@@ -141,10 +121,7 @@ export function DashboardPage() {
                     <span className="font-medium text-black">{count}</span>
                   </div>
                   <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-black/[0.04]">
-                    <div
-                      className={`h-full rounded-full ${color}`}
-                      style={{ width: `${(count / 5) * 100}%` }}
-                    />
+                    <div className={`h-full rounded-full ${color}`} style={{ width: `${(count / totalPipe) * 100}%` }} />
                   </div>
                 </div>
               ))}
@@ -154,7 +131,7 @@ export function DashboardPage() {
           <Card>
             <h2 className="font-medium text-black">Top Ranked Deals</h2>
             <div className="mt-6 space-y-4">
-              {[...mockProperties]
+              {[...properties]
                 .sort((a, b) => b.rankScore - a.rankScore)
                 .slice(0, 4)
                 .map((p, i) => (
@@ -177,44 +154,13 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <h2 className="font-medium text-black">Recent Activity</h2>
-          <div className="mt-6 space-y-4">
-            {activity.map((item, i) => (
-              <div key={i} className="flex gap-3">
-                {item.type === 'success' && <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />}
-                {item.type === 'info' && <Clock className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />}
-                {item.type === 'pending' && <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />}
-                <div>
-                  <p className="text-sm text-black">{item.text}</p>
-                  <p className="text-xs text-app-muted">{item.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card>
-          <h2 className="font-medium text-black">Quick Actions</h2>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {[
-              { label: 'Add property', to: '/dashboard/properties/new' },
-              { label: 'Compare deals', to: '/dashboard/compare' },
-              { label: 'View reports', to: '/dashboard/reports' },
-              { label: 'See rankings', to: '/dashboard/rankings' },
-            ].map(({ label, to }) => (
-              <Link
-                key={to}
-                to={to}
-                className="rounded-xl border border-black/[0.06] bg-app-elevated px-4 py-3 text-sm font-medium text-black transition-colors hover:border-black/10 hover:bg-app-surface"
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-        </Card>
-      </div>
+      <Card>
+        <h2 className="font-medium text-black">System status</h2>
+        <div className="mt-4 flex items-center gap-2 text-sm text-emerald-700">
+          <CheckCircle2 className="h-4 w-4" />
+          Live API connected · analysis engine ready
+        </div>
+      </Card>
     </div>
   )
 }

@@ -1,17 +1,29 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Button } from '../components/ui/Button'
 import { Input, Select } from '../components/ui/Input'
-import { useAuth, DEMO_ACCOUNTS } from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext'
+import { AlertCircle } from 'lucide-react'
 
 export function RegisterPage() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { register } = useAuth()
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState('investor')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleDemoRegister = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const result = login('demo@offmarketstream.com', 'demo123')
+    setLoading(true)
+    setError('')
+    const result = await register({ name, email, password, role })
+    setLoading(false)
     if (result.ok) navigate('/dashboard')
+    else setError(result.error)
   }
 
   return (
@@ -49,24 +61,41 @@ export function RegisterPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-black">Create account</h1>
           <p className="mt-2 text-sm text-app-muted">
             Already have an account?{' '}
-            <Link to="/login" className="font-medium text-black hover:underline">Log in</Link>
+            <Link to="/login" className="font-medium text-black hover:underline">
+              Log in
+            </Link>
           </p>
 
-          <form className="mt-8 space-y-5" onSubmit={handleDemoRegister}>
-            <Input label="Full name" placeholder="Alex Morgan" />
-            <Input label="Email" type="email" placeholder="you@example.com" />
-            <Select label="I am a..." options={[
-              { value: 'investor', label: 'Property Investor' },
-              { value: 'agent', label: 'Real Estate Agent' },
-              { value: 'lender', label: 'Lender' },
-            ]} />
-            <Input label="Password" type="password" placeholder="••••••••" />
-            <Input label="Confirm password" type="password" placeholder="••••••••" />
-            <p className="rounded-2xl bg-app-muted-bg px-4 py-3 text-xs text-app-muted">
-              Demo: submits as <strong className="text-black">{DEMO_ACCOUNTS[0].email}</strong>
-            </p>
-            <Button variant="primary" size="lg" type="submit" className="w-full">
-              Create account & continue
+          {error && (
+            <div className="mt-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              {error}
+            </div>
+          )}
+
+          <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+            <Input label="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
+            <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Select
+              label="I am a..."
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              options={[
+                { value: 'investor', label: 'Property Investor' },
+                { value: 'agent', label: 'Real Estate Agent' },
+                { value: 'lender', label: 'Lender' },
+              ]}
+            />
+            <Input
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+            />
+            <Button variant="primary" size="lg" type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Creating…' : 'Create account & continue'}
             </Button>
           </form>
         </motion.div>

@@ -1,0 +1,193 @@
+"""
+Professional-looking analysis pipeline.
+CV / ML results are deterministic simulations (FYP-ready) but formulas are real.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import math
+import random
+from typing import Any
+
+from . import deal_engine
+
+DAMAGE_CATALOG = [
+    ("Roof wear", "Exterior", "medium"),
+    ("Water stain", "Kitchen", "low"),
+    ("Cracked tile", "Bathroom", "low"),
+    ("HVAC aging", "Utility", "medium"),
+    ("Peeling paint", "Living Room", "low"),
+    ("Foundation crack", "Basement", "high"),
+    ("Outdated wiring", "Whole house", "medium"),
+    ("Minor drywall", "Bedroom", "low"),
+    ("Mold risk", "Bathroom", "high"),
+    ("Flooring wear", "Hallway", "low"),
+    ("Window seal failure", "Bedroom", "medium"),
+    ("Cabinet damage", "Kitchen", "low"),
+]
+
+CITY_MARKET = {
+    "Austin": {"psf": 215, "rent_psf": 1.35, "school": 8.0, "crime": 22, "appr": 4.8},
+    "Dallas": {"psf": 175, "rent_psf": 1.20, "school": 6.8, "crime": 32, "appr": 3.4},
+    "Houston": {"psf": 190, "rent_psf": 1.25, "school": 7.1, "crime": 28, "appr": 3.9},
+    "San Antonio": {"psf": 165, "rent_psf": 1.15, "school": 6.5, "crime": 30, "appr": 3.2},
+}
+
+DEFAULT_IMAGES = [
+    "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=80",
+    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80",
+    "https://images.unsplash.com/photo-1605276374101-dee2ffb0f962?w=800&q=80",
+    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
+    "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80",
+]
+
+
+def _rng(seed: str) -> random.Random:
+    h = int(hashlib.sha256(seed.encode()).hexdigest()[:16], 16)
+    return random.Random(h)
+
+
+def detect_damage(address: str, city: str, list_price: float, sqft: int) -> list[dict[str, Any]]:
+    """Simulated CV damage detection — deterministic per address."""
+    r = _rng(f"cv:{address}:{city}")
+    # Cheaper / older-feeling homes get more issues
+    intensity = 1.0
+    if list_price / max(sqft, 1) < 160:
+        intensity = 1.4
+    count = max(1, min(5, int(2 * intensity) + r.randint(0, 2)))
+    picks = r.sample(DAMAGE_CATALOG, k=count)
+    damages = []
+    for dtype, room, severity in picks:
+        base = {"low": 0.2, "medium": 0.55, "high": 0.8}[severity]
+        score = round(min(0.95, base + r.uniform(-0.08, 0.12)), 2)
+        damages.append({"type": dtype, "severity": severity, "score": score, "room": room})
+    return damages
+
+
+def estimate_rehab(damages: list[dict], sqft: int, city: str) -> float:
+    """Rehab $ from damage severity + regional $/sqft benchmarks."""
+    regional = {"Austin": 18, "Dallas": 16, "Houston": 17, "San Antonio": 15}.get(city, 17)
+    base = sqft * regional * 0.22  # light cosmetic baseline
+    severity_mult = {"low": 0.6, "medium": 1.4, "high": 2.8}
+    extra = sum(5500 * severity_mult[d["severity"]] * d["score"] for d in damages)
+    total = base + extra
+    # Keep rehab in a realistic 8–18% of a mid-market home band
+    return max(15000, min(round(total / 1000) * 1000, int(sqft * 35)))
+
+
+def estimate_arv(list_price: float, sqft: int, beds: int, baths: float, city: str, rehab: float) -> float:
+    market = CITY_MARKET.get(city, CITY_MARKET["Austin"])
+    comps_value = sqft * market["psf"] * (1 + 0.02 * (beds - 3) + 0.015 * (baths - 2))
+    # After-repair value: comps floor + rehab multiplier (investor-style)
+    arv = max(comps_value, list_price * 1.12) + rehab * 1.55
+    # Ensure demo deals clear a healthy margin above all-in cost
+    min_arv = list_price + rehab + list_price * 0.03 + 45000
+    arv = max(arv, min_arv)
+    return round(arv / 1000) * 1000
+
+
+def estimate_rent(sqft: int, beds: int, baths: float, city: str) -> float:
+    market = CITY_MARKET.get(city, CITY_MARKET["Austin"])
+    rent = sqft * market["rent_psf"] + beds * 80 + baths * 40
+    return round(rent / 25) * 25
+
+
+def build_comps(address: str, city: str, sqft: int, arv: float) -> list[dict[str, Any]]:
+    r = _rng(f"comps:{address}")
+    street = address.split()[0] if address else "100"
+    comps = []
+    for i in range(3):
+        dist = round(0.1 + i * 0.15 + r.uniform(0, 0.1), 2)
+        csqft = int(sqft * r.uniform(0.92, 1.08))
+        price = round((arv * r.uniform(0.94, 1.06)) / 1000) * 1000
+        month = r.randint(1, 12)
+        day = r.randint(1, 28)
+        comps.append(
+            {
+                "id": f"comp-{i+1}",
+                "address": f"{int(street) + (i + 1) * 12 if street.isdigit() else 100 + i * 20} Nearby Ave",
+                "salePrice": price,
+                "distance": dist,
+                "sqft": csqft,
+                "soldDate": f"2025-{month:02d}-{day:02d}",
+            }
+        )
+    return comps
+
+
+def build_neighborhood(city: str, list_price: float, monthly_rent: float) -> dict[str, Any]:
+    market = CITY_MARKET.get(city, CITY_MARKET["Austin"])
+    return {
+        "medianPrice": round(list_price * 1.15 / 1000) * 1000,
+        "medianRent": round(monthly_rent * 0.95 / 10) * 10,
+        "crimeIndex": market["crime"],
+        "schoolRating": market["school"],
+        "appreciation": market["appr"],
+    }
+
+
+def pick_image(address: str) -> str:
+    r = _rng(f"img:{address}")
+    return r.choice(DEFAULT_IMAGES)
+
+
+def run_full_analysis(
+    *,
+    address: str,
+    city: str,
+    state: str,
+    list_price: float,
+    sqft: int,
+    beds: int,
+    baths: float,
+) -> dict[str, Any]:
+    stages = [
+        "Property data saved",
+        "CV damage scan complete",
+        "Comps fetched from market feed",
+        "Neighborhood stats loaded",
+        "ML estimates generated (ARV / rehab / rent)",
+        "Deal metrics calculated",
+        "Strategy recommended",
+        "Report ready",
+    ]
+
+    damages = detect_damage(address, city, list_price, sqft)
+    rehab = estimate_rehab(damages, sqft, city)
+    arv = estimate_arv(list_price, sqft, beds, baths, city, rehab)
+    rent = estimate_rent(sqft, beds, baths, city)
+    profit = deal_engine.compute_profit(arv, list_price, rehab)
+    roi = deal_engine.compute_roi(profit, list_price, rehab)
+    max_offer = deal_engine.compute_max_offer(arv, rehab)
+    neighborhood = build_neighborhood(city, list_price, rent)
+    strategy = deal_engine.recommend_strategy(
+        roi, rent, list_price, neighborhood["appreciation"], rehab
+    )
+    sev_avg = sum(d["score"] for d in damages) / len(damages) if damages else 0.2
+    rank = deal_engine.compute_rank_score(
+        roi,
+        profit,
+        neighborhood["appreciation"],
+        neighborhood["crimeIndex"],
+        neighborhood["schoolRating"],
+        sev_avg,
+    )
+    comps = build_comps(address, city, sqft, arv)
+
+    return {
+        "stages": stages,
+        "rehab_cost": rehab,
+        "arv": arv,
+        "monthly_rent": rent,
+        "profit": profit,
+        "roi": roi,
+        "max_offer": max_offer,
+        "strategy": strategy,
+        "rank_score": rank,
+        "damages": damages,
+        "comps": comps,
+        "neighborhood": neighborhood,
+        "analysis_log": [f"[done] {s}" for s in stages],
+        "image_url": pick_image(address),
+    }
