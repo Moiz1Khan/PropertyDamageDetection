@@ -79,6 +79,7 @@ def create_property(
             sqft=body.sqft,
             beds=body.beds,
             baths=body.baths,
+            gallery_urls=body.gallery_image_urls,
         )
         status = "complete"
 
@@ -147,6 +148,7 @@ def reanalyze(
         sqft=prop.sqft,
         beds=prop.beds,
         baths=prop.baths,
+        gallery_urls=list(prop.gallery_images or []),
     )
     prop.status = "complete"
     prop.image_url = prop.image_url or result["image_url"]

@@ -164,8 +164,17 @@ export function PropertyDetailPage() {
               Damage Detection (Computer Vision)
             </h2>
             <p className="mt-1 text-sm text-app-muted">
-              {property.damages.length} issues detected across uploaded images
+              {property.damages.length > 0
+                ? `${property.damages.length} issues detected across uploaded images`
+                : 'No structural damage reported for the uploaded images.'}
             </p>
+            {property.damages.length === 0 &&
+              property.analysisLog?.some((l) => l.includes('[warning]')) && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  {property.analysisLog.find((l) => l.includes('[warning]'))?.replace('[warning] ', '') ??
+                    'Upload interior or exterior property photos for damage detection.'}
+                </div>
+              )}
             <div className="mt-4 space-y-3">
               {property.damages.map((d, i) => (
                 <div

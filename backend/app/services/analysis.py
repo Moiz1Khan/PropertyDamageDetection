@@ -11,6 +11,7 @@ import random
 from typing import Any
 
 from . import deal_engine
+from .image_cv import assess_uploaded_images, paths_from_gallery_urls
 
 DAMAGE_CATALOG = [
     ("Roof wear", "Exterior", "medium"),
@@ -141,6 +142,7 @@ def run_full_analysis(
     sqft: int,
     beds: int,
     baths: float,
+    gallery_urls: list[str] | None = None,
 ) -> dict[str, Any]:
     stages = [
         "Property data saved",
@@ -152,8 +154,21 @@ def run_full_analysis(
         "Strategy recommended",
         "Report ready",
     ]
+    extra_log: list[str] = []
 
-    damages = detect_damage(address, city, list_price, sqft)
+    upload_paths = paths_from_gallery_urls(gallery_urls or [])
+    if upload_paths:
+        assessment = assess_uploaded_images(upload_paths)
+        if assessment["property_like"]:
+            stages[1] = "CV verified property photos — damage scan complete"
+            damages = detect_damage(address, city, list_price, sqft)
+        else:
+            stages[1] = "CV upload check — not property photos"
+            damages = []
+            extra_log.append(f"[warning] {assessment['message']}")
+    else:
+        stages[1] = "CV damage scan complete (no images uploaded)"
+        damages = detect_damage(address, city, list_price, sqft)
     rehab = estimate_rehab(damages, sqft, city)
     arv = estimate_arv(list_price, sqft, beds, baths, city, rehab)
     rent = estimate_rent(sqft, beds, baths, city)
@@ -188,6 +203,6 @@ def run_full_analysis(
         "damages": damages,
         "comps": comps,
         "neighborhood": neighborhood,
-        "analysis_log": [f"[done] {s}" for s in stages],
+        "analysis_log": [f"[done] {s}" for s in stages] + extra_log,
         "image_url": pick_image(address),
     }
