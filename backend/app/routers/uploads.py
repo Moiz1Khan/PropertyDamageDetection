@@ -1,3 +1,4 @@
+import tempfile
 import uuid
 from pathlib import Path
 from typing import Annotated
@@ -6,6 +7,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from ..auth import get_current_user
 from ..models import User
+from ..services.image_cv import property_photo_score
 
 router = APIRouter(tags=["uploads"])
 
@@ -37,6 +39,17 @@ async def upload_property_images(
         data = await uf.read()
         if len(data) > MAX_BYTES:
             raise HTTPException(400, f"{uf.filename} exceeds 10MB limit")
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+            tmp.write(data)
+            tmp_path = Path(tmp.name)
+        try:
+            if property_photo_score(tmp_path) < 0.42:
+                raise HTTPException(
+                    400,
+                    "Image does not look like a property photo. Upload interior or exterior building photos.",
+                )
+        finally:
+            tmp_path.unlink(missing_ok=True)
         safe_name = f"{uuid.uuid4().hex[:8]}{ext}"
         path = dest / safe_name
         path.write_bytes(data)

@@ -14,6 +14,7 @@ from . import deal_engine
 from pathlib import Path
 
 from .image_cv import assess_uploaded_images, paths_from_gallery_urls, scene_summary
+from . import rentcast
 
 DAMAGE_CATALOG = [
     ("Roof wear", "Exterior", "medium"),
@@ -183,6 +184,8 @@ def run_full_analysis(
     address: str,
     city: str,
     state: str,
+    zip_code: str = "",
+    property_type: str = "Single Family",
     list_price: float,
     sqft: int,
     beds: int,
@@ -217,8 +220,45 @@ def run_full_analysis(
         stages[1] = "CV damage scan complete (no images uploaded)"
         damages = detect_damage(address, city, list_price, sqft)
     rehab = estimate_rehab(damages, sqft, city)
-    arv = estimate_arv(list_price, sqft, beds, baths, city, rehab)
-    rent = estimate_rent(sqft, beds, baths, city)
+
+    full_address = rentcast.format_full_address(address, city, state, zip_code)
+    rc_value = rentcast.fetch_value_and_comps(
+        full_address=full_address,
+        property_type=property_type,
+        beds=beds,
+        baths=baths,
+        sqft=sqft,
+    )
+    comps = rentcast.normalize_comps(rc_value) if rc_value else []
+    if comps:
+        stages[2] = "Comps fetched from RentCast (live)"
+        extra_log.append("[done] Market comps from RentCast API")
+    else:
+        stages[2] = "Comps — demo fallback (activate RentCast or use US address)"
+        comps = build_comps(address, city, sqft, estimate_arv(list_price, sqft, beds, baths, city, rehab))
+
+    rc_arv = rentcast.avm_price(rc_value) if rc_value else None
+    arv = (
+        round(rc_arv / 1000) * 1000
+        if rc_arv
+        else estimate_arv(list_price, sqft, beds, baths, city, rehab)
+    )
+    if not rc_arv and comps and comps[0].get("salePrice") and sqft:
+        psf = sum(c["salePrice"] for c in comps[:5]) / max(sum(c["sqft"] for c in comps[:5]), 1)
+        arv = max(arv, round(sqft * psf / 1000) * 1000)
+
+    rc_rent = rentcast.fetch_rent_estimate(
+        full_address=full_address,
+        property_type=property_type,
+        beds=beds,
+        baths=baths,
+        sqft=sqft,
+    )
+    rent = rc_rent if rc_rent else estimate_rent(sqft, beds, baths, city)
+    if rc_arv or comps:
+        stages[3] = "Neighborhood / market from RentCast + estimate tables"
+    if rc_arv:
+        stages[4] = "ARV/rent from RentCast AVM"
     profit = deal_engine.compute_profit(arv, list_price, rehab)
     roi = deal_engine.compute_roi(profit, list_price, rehab)
     max_offer = deal_engine.compute_max_offer(arv, rehab)
@@ -235,8 +275,6 @@ def run_full_analysis(
         neighborhood["schoolRating"],
         sev_avg,
     )
-    comps = build_comps(address, city, sqft, arv)
-
     return {
         "stages": stages,
         "rehab_cost": rehab,
