@@ -12,9 +12,40 @@ Wait 1–2 minutes, then reconnect via Lightsail SSH.
 
 ## One-time server setup
 
-In Lightsail SSH (as `ubuntu`), download your GitHub **deploy key** or use HTTPS clone (public repo).
+The repo is **private**, so `curl raw.githubusercontent.com/...` returns **404**. Use **git clone** on the VM (SSH key or PAT), then run bootstrap locally.
 
-For SSH deploy from GitHub Actions you need a key pair — see below.
+### Option A — SSH key (recommended)
+
+On the VM:
+
+```bash
+ssh-keygen -t ed25519 -C "lightsail" -f ~/.ssh/id_ed25519 -N ""
+cat ~/.ssh/id_ed25519.pub
+```
+
+Add the printed key in GitHub → **PropertyDamageDetection** → **Settings → Deploy keys** → **Add deploy key** (read access).
+
+Then:
+
+```bash
+sudo mkdir -p /var/www/offmarketstream
+sudo chown ubuntu:ubuntu /var/www/offmarketstream
+git clone git@github.com:Moiz1Khan/PropertyDamageDetection.git /var/www/offmarketstream
+bash /var/www/offmarketstream/deploy/bootstrap-server.sh
+```
+
+### Option B — HTTPS + Personal Access Token
+
+Create a GitHub PAT (repo scope), then:
+
+```bash
+git clone https://YOUR_GITHUB_TOKEN@github.com/Moiz1Khan/PropertyDamageDetection.git /var/www/offmarketstream
+bash /var/www/offmarketstream/deploy/bootstrap-server.sh
+```
+
+### Option C — Public repo
+
+If you set the repository to **Public**, the one-line curl bootstrap works again:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Moiz1Khan/PropertyDamageDetection/main/deploy/bootstrap-server.sh -o /tmp/bootstrap.sh
