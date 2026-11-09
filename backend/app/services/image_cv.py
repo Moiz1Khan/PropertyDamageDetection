@@ -70,6 +70,37 @@ def property_photo_score(path: Path) -> float:
     return round(max(0.0, min(1.0, score)), 2)
 
 
+def classify_scene(path: Path) -> str:
+    """Guess exterior vs interior from color layout (heuristic until YOLOv8n)."""
+    img = Image.open(path).convert("RGB").resize((256, 256))
+    top = [img.getpixel((x, y)) for y in range(0, 80) for x in range(256)]
+    bottom = [img.getpixel((x, y)) for y in range(176, 256) for x in range(256)]
+
+    def sky_ratio(samples: list[tuple[int, int, int]]) -> float:
+        return sum(
+            1 for r, g, b in samples if b > r + 12 and b >= g and (r + g + b) / 3 > 90
+        ) / max(len(samples), 1)
+
+    def grass_ratio(samples: list[tuple[int, int, int]]) -> float:
+        return sum(1 for r, g, b in samples if g > r + 8 and g > b and g > 70) / max(len(samples), 1)
+
+    sky = sky_ratio(top)
+    grass = grass_ratio(bottom)
+    if sky > 0.08 or (sky > 0.04 and grass > 0.06):
+        return "exterior"
+    if sky < 0.03:
+        return "interior"
+    return "unknown"
+
+
+def scene_summary(paths: list[Path]) -> set[str]:
+    scenes: set[str] = set()
+    for p in paths:
+        scenes.add(classify_scene(p))
+    scenes.discard("unknown")
+    return scenes
+
+
 def assess_uploaded_images(paths: list[Path]) -> dict:
     if not paths:
         return {"property_like": False, "scores": [], "message": "No image files found"}

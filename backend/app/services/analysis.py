@@ -11,7 +11,9 @@ import random
 from typing import Any
 
 from . import deal_engine
-from .image_cv import assess_uploaded_images, paths_from_gallery_urls
+from pathlib import Path
+
+from .image_cv import assess_uploaded_images, paths_from_gallery_urls, scene_summary
 
 DAMAGE_CATALOG = [
     ("Roof wear", "Exterior", "medium"),
