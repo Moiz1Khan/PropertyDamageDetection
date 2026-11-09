@@ -51,21 +51,64 @@ def _rng(seed: str) -> random.Random:
     return random.Random(h)
 
 
-def detect_damage(address: str, city: str, list_price: float, sqft: int) -> list[dict[str, Any]]:
-    """Simulated CV damage detection — deterministic per address."""
-    r = _rng(f"cv:{address}:{city}")
-    # Cheaper / older-feeling homes get more issues
+def _sample_damages(
+    allowed: list[tuple],
+    seed: str,
+    list_price: float,
+    sqft: int,
+    count_override: int | None = None,
+) -> list[dict[str, Any]]:
+    r = _rng(seed)
     intensity = 1.0
     if list_price / max(sqft, 1) < 160:
         intensity = 1.4
-    count = max(1, min(5, int(2 * intensity) + r.randint(0, 2)))
-    picks = r.sample(DAMAGE_CATALOG, k=count)
+    count = count_override if count_override is not None else max(1, min(5, int(2 * intensity) + r.randint(0, 2)))
+    count = min(count, len(allowed))
+    picks = r.sample(allowed, k=count)
     damages = []
     for dtype, room, severity in picks:
         base = {"low": 0.2, "medium": 0.55, "high": 0.8}[severity]
         score = round(min(0.95, base + r.uniform(-0.08, 0.12)), 2)
         damages.append({"type": dtype, "severity": severity, "score": score, "room": room})
     return damages
+
+
+def detect_damage(address: str, city: str, list_price: float, sqft: int) -> list[dict[str, Any]]:
+    """Simulated CV damage detection — deterministic per address (no uploads)."""
+    return _sample_damages(DAMAGE_CATALOG, f"cv:{address}:{city}", list_price, sqft)
+
+
+def detect_damage_for_uploads(
+    paths: list[Path],
+    address: str,
+    city: str,
+    list_price: float,
+    sqft: int,
+) -> tuple[list[dict[str, Any]], str]:
+    """Only report damage types that match uploaded scene (exterior vs interior)."""
+    scenes = scene_summary(paths)
+    if scenes == {"exterior"}:
+        allowed = [d for d in DAMAGE_CATALOG if d[1] == "Exterior"]
+        note = "exterior uploads only"
+    elif scenes and "exterior" not in scenes:
+        allowed = [d for d in DAMAGE_CATALOG if d[1] != "Exterior"]
+        note = "interior uploads only"
+    elif "exterior" in scenes and "interior" in scenes:
+        allowed = DAMAGE_CATALOG
+        note = "interior and exterior uploads"
+    else:
+        allowed = [d for d in DAMAGE_CATALOG if d[1] == "Exterior"]
+        note = "upload scene uncertain — exterior-only findings"
+    if not allowed:
+        allowed = [d for d in DAMAGE_CATALOG if d[1] == "Exterior"]
+    damages = _sample_damages(
+        allowed,
+        f"cv:{address}:{city}:uploads:{len(paths)}:{','.join(sorted(scenes))}",
+        list_price,
+        sqft,
+        count_override=min(3, len(allowed)),
+    )
+    return damages, note
 
 
 def estimate_rehab(damages: list[dict], sqft: int, city: str) -> float:
@@ -162,8 +205,10 @@ def run_full_analysis(
     if upload_paths:
         assessment = assess_uploaded_images(upload_paths)
         if assessment["property_like"]:
-            stages[1] = "CV verified property photos — damage scan complete"
-            damages = detect_damage(address, city, list_price, sqft)
+            damages, scene_note = detect_damage_for_uploads(
+                upload_paths, address, city, list_price, sqft
+            )
+            stages[1] = f"CV damage scan complete ({scene_note})"
         else:
             stages[1] = "CV upload check — not property photos"
             damages = []

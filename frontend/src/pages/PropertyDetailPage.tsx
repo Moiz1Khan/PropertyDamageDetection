@@ -194,7 +194,7 @@ export function PropertyDetailPage() {
             </h2>
             <p className="mt-1 text-sm text-app-muted">
               {property.damages.length > 0
-                ? `${property.damages.length} issues detected across uploaded images`
+                ? `${property.damages.length} issue(s) flagged from uploaded photo type (exterior vs interior)`
                 : 'No structural damage reported for the uploaded images.'}
             </p>
             {property.damages.length === 0 &&
