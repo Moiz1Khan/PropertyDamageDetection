@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge, StatusBadge } from '../components/ui/Badge'
@@ -15,6 +15,7 @@ import {
   Bed,
   Bath,
   RefreshCw,
+  Trash2,
 } from 'lucide-react'
 import { formatCurrency, formatPercent, strategyLabels } from '../data/mockData'
 import { api, type ApiProperty } from '../lib/api'
@@ -27,6 +28,7 @@ const severityVariant = {
 
 export function PropertyDetailPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [property, setProperty] = useState<ApiProperty | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -69,6 +71,21 @@ export function PropertyDetailPage() {
     }
   }
 
+  const remove = async () => {
+    if (!id || !property) return
+    const label = `${property.address}, ${property.city}`
+    if (!window.confirm(`Delete this property?\n\n${label}\n\nThis cannot be undone.`)) return
+    setBusy(true)
+    setError('')
+    try {
+      await api.deleteProperty(id)
+      navigate('/dashboard/properties', { replace: true })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Delete failed')
+      setBusy(false)
+    }
+  }
+
   if (loading) return <p className="text-sm text-app-muted">Loading property…</p>
   if (!property) return <p className="text-sm text-red-600">{error || 'Property not found'}</p>
 
@@ -77,6 +94,9 @@ export function PropertyDetailPage() {
 
   return (
     <div className="space-y-8">
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
       <div>
         <Link
           to="/dashboard/properties"
@@ -123,6 +143,15 @@ export function PropertyDetailPage() {
             <Button variant="primary" onClick={download} className="w-full sm:w-auto" disabled={busy}>
               <Download className="h-4 w-4" />
               Download Report
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={remove}
+              className="w-full border border-red-200 text-red-600 hover:bg-red-50 sm:w-auto"
+              disabled={busy}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
             </Button>
           </div>
         </div>

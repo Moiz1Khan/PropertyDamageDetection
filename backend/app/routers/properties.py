@@ -47,6 +47,21 @@ def list_properties(
     return [property_to_out(p) for p in props]
 
 
+@router.delete("/properties/{property_id}", status_code=204)
+def delete_property(
+    property_id: str,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    prop = db.get(Property, property_id)
+    if not prop:
+        raise HTTPException(404, "Property not found")
+    if user.role != "admin" and prop.owner_id != user.id:
+        raise HTTPException(403, "Not allowed")
+    db.delete(prop)
+    db.commit()
+
+
 @router.get("/properties/{property_id}", response_model=PropertyOut)
 def get_property(
     property_id: str,

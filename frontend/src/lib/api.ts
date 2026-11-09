@@ -100,6 +100,10 @@ export const api = {
     ),
   properties: () => request<ApiProperty[]>('/properties'),
   property: (id: string) => request<ApiProperty>(`/properties/${id}`),
+  deleteProperty: (id: string) =>
+    request<void>(`/properties/${id}`, {
+      method: 'DELETE',
+    }),
   createProperty: (body: Record<string, unknown>) =>
     request<{ property: ApiProperty; stages: string[] }>('/properties', {
       method: 'POST',
