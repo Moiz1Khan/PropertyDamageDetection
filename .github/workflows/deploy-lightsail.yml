@@ -1,0 +1,33 @@
+name: Deploy to Lightsail
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: lightsail-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          command_timeout: 25m
+          script: |
+            set -e
+            if [ ! -d /var/www/offmarketstream ]; then
+              echo "Server not bootstrapped. Run deploy/bootstrap-server.sh once on the VM."
+              exit 1
+            fi
+            cd /var/www/offmarketstream
+            git fetch origin main
+            git reset --hard origin/main
+            chmod +x deploy/deploy.sh
+            bash deploy/deploy.sh
