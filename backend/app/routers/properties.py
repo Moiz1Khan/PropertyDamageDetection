@@ -98,7 +98,10 @@ def create_property(
         lot_size=body.lot_size,
         notes=body.notes,
         status=status,
-        image_url=body.image_url or (result["image_url"] if result else ""),
+        image_url=body.image_url
+        or ((body.gallery_image_urls or [None])[0])
+        or (result["image_url"] if result else ""),
+        gallery_images=body.gallery_image_urls or [],
         rehab_cost=result["rehab_cost"] if result else 0,
         arv=result["arv"] if result else 0,
         monthly_rent=result["monthly_rent"] if result else 0,

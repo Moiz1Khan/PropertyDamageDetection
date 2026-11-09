@@ -1,19 +1,36 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input, Select, Textarea } from '../components/ui/Input'
-import { Upload, ImagePlus, ArrowLeft, Info, Loader2 } from 'lucide-react'
+import { Upload, ImagePlus, ArrowLeft, Info, Loader2, X } from 'lucide-react'
 import { api } from '../lib/api'
 
 const roomTags = ['Exterior', 'Kitchen', 'Bathroom', 'Bedroom', 'Living Room', 'Basement', 'Roof']
+const MAX_FILES = 20
+const MAX_MB = 10
+
+function validateFiles(incoming: FileList | File[]): File[] {
+  const list = Array.from(incoming)
+  const allowed = ['image/jpeg', 'image/png', 'image/webp']
+  const out: File[] = []
+  for (const f of list) {
+    if (!allowed.includes(f.type)) continue
+    if (f.size > MAX_MB * 1024 * 1024) continue
+    out.push(f)
+  }
+  return out.slice(0, MAX_FILES)
+}
 
 export function AddPropertyPage() {
   const navigate = useNavigate()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [stages, setStages] = useState<string[]>([])
+  const [files, setFiles] = useState<File[]>([])
+  const [previews, setPreviews] = useState<string[]>([])
   const [form, setForm] = useState({
     address: '1842 Oakwood Drive',
     city: 'Austin',
@@ -31,11 +48,40 @@ export function AddPropertyPage() {
 
   const update = (key: string, value: string | number) => setForm((f) => ({ ...f, [key]: value }))
 
+  const addFiles = useCallback((incoming: FileList | File[]) => {
+    const next = validateFiles(incoming)
+    if (!next.length) {
+      setError('Use PNG, JPG, or WebP under 10MB each.')
+      return
+    }
+    setError('')
+    setFiles((prev) => {
+      const merged = [...prev, ...next].slice(0, MAX_FILES)
+      setPreviews(merged.map((f) => URL.createObjectURL(f)))
+      return merged
+    })
+  }, [])
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => {
+      const merged = prev.filter((_, i) => i !== index)
+      setPreviews(merged.map((f) => URL.createObjectURL(f)))
+      return merged
+    })
+  }
+
   const runAnalysis = async () => {
     setLoading(true)
     setError('')
-    setStages(['Uploading property…', 'Queuing CV scan…'])
+    setStages(['Saving property details…'])
     try {
+      let galleryUrls: string[] = []
+      if (files.length > 0) {
+        setStages((s) => [...s, `Uploading ${files.length} image(s)…`])
+        const uploaded = await api.uploadPropertyImages(files)
+        galleryUrls = uploaded.images.map((i) => i.url)
+      }
+      setStages((s) => [...s, 'Queuing CV scan…'])
       const res = await api.createProperty({
         ...form,
         list_price: Number(form.list_price),
@@ -44,6 +90,8 @@ export function AddPropertyPage() {
         baths: Number(form.baths),
         year_built: Number(form.year_built) || null,
         lot_size: Number(form.lot_size) || null,
+        gallery_image_urls: galleryUrls.length ? galleryUrls : undefined,
+        image_url: galleryUrls[0],
         run_analysis: true,
       })
       setStages(res.stages)
@@ -173,8 +221,8 @@ export function AddPropertyPage() {
         <Card>
           <h2 className="font-medium text-black">Property Images</h2>
           <p className="mt-2 text-sm text-app-muted">
-            Upload photos for AI damage detection. For the demo, you can run analysis without files — the CV engine
-            will simulate a professional scan from property attributes.
+            Upload photos for AI damage detection. You can also run analysis without images — CV will simulate from
+            property attributes.
           </p>
 
           <div className="mt-4 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
@@ -182,17 +230,66 @@ export function AddPropertyPage() {
             CV model detects: roof wear, water stains, cracks, peeling paint, HVAC aging, and foundation issues.
           </div>
 
-          <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-black/10 bg-app-elevated px-6 py-16 text-center">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files?.length) addFiles(e.target.files)
+              e.target.value = ''
+            }}
+          />
+
+          <div
+            className="mt-6 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-black/10 bg-app-elevated px-6 py-10 text-center"
+            onDragOver={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+            }}
+            onDrop={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files)
+            }}
+          >
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-black/[0.04]">
               <Upload className="h-6 w-6 text-app-subtle" />
             </div>
             <p className="mt-4 font-medium text-black">Drag and drop images here</p>
-            <p className="mt-1 text-sm text-app-muted">PNG, JPG up to 10MB each · Max 20 images</p>
-            <Button variant="secondary" size="sm" className="mt-6" type="button">
+            <p className="mt-1 text-sm text-app-muted">
+              PNG, JPG up to 10MB each · Max {MAX_FILES} images · {files.length} selected
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-6"
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+            >
               <ImagePlus className="h-4 w-4" />
               Browse files
             </Button>
           </div>
+
+          {previews.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {previews.map((src, i) => (
+                <div key={src} className="relative aspect-[4/3] overflow-hidden rounded-xl border border-black/10">
+                  <img src={src} alt="" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black"
+                    onClick={() => removeFile(i)}
+                    aria-label="Remove image"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="mt-6">
             <p className="text-sm font-medium text-app-subtle">Tag rooms (optional)</p>

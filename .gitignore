@@ -27,6 +27,7 @@ Thumbs.db
 backend/.venv/
 backend/**/__pycache__/
 backend/*.db
+backend/uploads/
 backend/.env
 deploy/.env.production
 deploy/.ssh/

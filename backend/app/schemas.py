@@ -71,6 +71,7 @@ class PropertyCreate(BaseModel):
     lot_size: int | None = None
     notes: str | None = None
     image_url: str | None = None
+    gallery_image_urls: list[str] | None = None
     run_analysis: bool = True
 
 
@@ -87,6 +88,7 @@ class PropertyOut(BaseModel):
     baths: float
     status: str
     imageUrl: str
+    galleryImages: list[str] = []
     rehabCost: float
     arv: float
     monthlyRent: float
@@ -131,6 +133,7 @@ def property_to_out(p) -> PropertyOut:
         baths=p.baths,
         status=p.status,
         imageUrl=p.image_url or "",
+        galleryImages=list(p.gallery_images or []),
         rehabCost=p.rehab_cost,
         arv=p.arv,
         monthlyRent=p.monthly_rent,

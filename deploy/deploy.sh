@@ -9,6 +9,9 @@ git fetch origin main
 git reset --hard origin/main
 
 echo "==> Backend"
+mkdir -p "$APP_ROOT/backend/uploads/property"
+chown -R ubuntu:ubuntu "$APP_ROOT/backend/uploads" 2>/dev/null || true
+
 cd "$APP_ROOT/backend"
 python3 -m venv .venv
 source .venv/bin/activate

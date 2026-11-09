@@ -53,6 +53,7 @@ class Property(Base):
     comps: Mapped[dict | list] = mapped_column(JSON, default=list)
     neighborhood: Mapped[dict] = mapped_column(JSON, default=dict)
     analysis_log: Mapped[list] = mapped_column(JSON, default=list)
+    gallery_images: Mapped[list] = mapped_column(JSON, default=list)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

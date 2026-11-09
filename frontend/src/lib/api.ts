@@ -59,6 +59,7 @@ export type ApiProperty = {
   baths: number
   status: 'analyzing' | 'complete' | 'draft' | string
   imageUrl: string
+  galleryImages?: string[]
   rehabCost: number
   arv: number
   monthlyRent: number
@@ -104,6 +105,25 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  uploadPropertyImages: async (files: File[]) => {
+    const fd = new FormData()
+    files.forEach((f) => fd.append('files', f))
+    const headers = new Headers()
+    const token = getToken()
+    if (token) headers.set('Authorization', `Bearer ${token}`)
+    const res = await fetch(`${API_BASE}/uploads/property-images`, { method: 'POST', body: fd, headers })
+    if (!res.ok) {
+      let detail = `Upload failed (${res.status})`
+      try {
+        const data = await res.json()
+        detail = data.detail || detail
+      } catch {
+        /* ignore */
+      }
+      throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail))
+    }
+    return res.json() as Promise<{ batchId: string; images: { url: string; name: string }[] }>
+  },
   analyze: (id: string) =>
     request<{ property: ApiProperty; stages: string[] }>(`/properties/${id}/analyze`, { method: 'POST' }),
   rankings: () => request<ApiProperty[]>('/rankings'),
