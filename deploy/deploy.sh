@@ -28,9 +28,23 @@ fi
 
 echo "==> Restart API"
 sudo systemctl restart offmarketstream-api
+sleep 2
 sudo systemctl reload nginx || sudo systemctl restart nginx
 
 echo "==> Health check"
-curl -fsS http://127.0.0.1/api/health
+ok=0
+for i in 1 2 3 4 5; do
+  if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then
+    ok=1
+    break
+  fi
+  sleep 2
+done
+if [ "$ok" -ne 1 ]; then
+  echo "API health check failed"
+  sudo systemctl status offmarketstream-api --no-pager || true
+  exit 1
+fi
+curl -fsS http://127.0.0.1:8000/api/health
 echo ""
 echo "Deploy complete."
