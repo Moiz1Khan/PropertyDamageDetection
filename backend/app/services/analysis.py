@@ -146,7 +146,8 @@ def build_comps(address: str, city: str, sqft: int, arv: float) -> list[dict[str
     comps = []
     for i in range(3):
         dist = round(0.1 + i * 0.15 + r.uniform(0, 0.1), 2)
-        csqft = int(sqft * r.uniform(0.92, 1.08))
+        csqft = sqft + r.randint(-rentcast.COMP_SQFT_TOLERANCE, rentcast.COMP_SQFT_TOLERANCE)
+        csqft = max(500, csqft)
         price = round((arv * r.uniform(0.94, 1.06)) / 1000) * 1000
         month = r.randint(1, 12)
         day = r.randint(1, 28)
@@ -229,12 +230,20 @@ def run_full_analysis(
         baths=baths,
         sqft=sqft,
     )
-    comps = rentcast.normalize_comps(rc_value) if rc_value else []
+    comps = rentcast.normalize_comps(rc_value, subject_sqft=sqft) if rc_value else []
     if comps:
-        stages[2] = "Comps fetched from RentCast (live)"
-        extra_log.append("[done] Market comps from RentCast API")
+        stages[2] = f"Comps from RentCast (±{rentcast.COMP_SQFT_TOLERANCE} sqft of subject)"
+        extra_log.append(
+            f"[done] {len(comps)} comparable(s) within ±{rentcast.COMP_SQFT_TOLERANCE} sqft"
+        )
+    elif rc_value:
+        stages[2] = f"No RentCast comps within ±{rentcast.COMP_SQFT_TOLERANCE} sqft"
+        extra_log.append(
+            f"[warning] No comparables within ±{rentcast.COMP_SQFT_TOLERANCE} sqft of {sqft:,} sqft"
+        )
+        comps = []
     else:
-        stages[2] = "Comps — demo fallback (activate RentCast or use US address)"
+        stages[2] = "Comps — demo fallback (US address + active RentCast key)"
         comps = build_comps(address, city, sqft, estimate_arv(list_price, sqft, beds, baths, city, rehab))
 
     rc_arv = rentcast.avm_price(rc_value) if rc_value else None

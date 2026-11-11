@@ -12,6 +12,7 @@ from ..config import settings
 logger = logging.getLogger(__name__)
 
 BASE = "https://api.rentcast.io/v1"
+COMP_SQFT_TOLERANCE = 100
 
 PROP_TYPE_MAP = {
     "Single Family": "Single Family",
@@ -47,7 +48,7 @@ def fetch_value_and_comps(
         "bedrooms": beds,
         "bathrooms": baths,
         "squareFootage": sqft,
-        "compCount": 8,
+        "compCount": 25,
         "maxRadius": 2.0,
         "daysOld": 365,
         "lookupSubjectAttributes": True,
@@ -96,10 +97,26 @@ def fetch_rent_estimate(
         return None
 
 
-def normalize_comps(payload: dict[str, Any]) -> list[dict[str, Any]]:
+def filter_comps_by_sqft(
+    comps: list[dict[str, Any]],
+    subject_sqft: int,
+    tolerance: int = COMP_SQFT_TOLERANCE,
+) -> list[dict[str, Any]]:
+    if subject_sqft <= 0:
+        return comps
+    lo = subject_sqft - tolerance
+    hi = subject_sqft + tolerance
+    matched = [c for c in comps if c.get("sqft") and lo <= int(c["sqft"]) <= hi]
+    return matched[:8]
+
+
+def normalize_comps(
+    payload: dict[str, Any],
+    subject_sqft: int | None = None,
+) -> list[dict[str, Any]]:
     raw = payload.get("comparables") or payload.get("comps") or []
     comps: list[dict[str, Any]] = []
-    for i, c in enumerate(raw[:8]):
+    for i, c in enumerate(raw):
         addr = c.get("formattedAddress") or c.get("address") or "Comparable sale"
         if isinstance(addr, dict):
             addr = addr.get("line1") or str(addr)
@@ -123,7 +140,10 @@ def normalize_comps(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 "soldDate": str(sold)[:10] if sold else "—",
             }
         )
-    return [c for c in comps if c["salePrice"] > 0]
+    comps = [c for c in comps if c["salePrice"] > 0 and c.get("sqft")]
+    if subject_sqft:
+        comps = filter_comps_by_sqft(comps, subject_sqft)
+    return comps
 
 
 def avm_price(payload: dict[str, Any]) -> float | None:
