@@ -32,3 +32,12 @@ backend/.env
 deploy/.env.production
 deploy/.ssh/
 *.zip
+
+# ML training artifacts
+ml/.venv/
+ml/data/
+ml/runs/
+ml/.env.ml
+ml/latest_dataset.txt
+ml/yolov8n.pt
+backend/models/

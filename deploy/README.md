@@ -77,3 +77,14 @@ Every push to `main` runs `.github/workflows/deploy-lightsail.yml` and runs `dep
 ```bash
 cd /var/www/offmarketstream && bash deploy/deploy.sh
 ```
+
+### YOLO weights (not in git)
+
+After training, copy `best.pt` to the server (survives deploys; CI does not ship weights):
+
+```bash
+scp -i deploy/.ssh/github_actions backend/models/damage_yolov8n/best.pt \
+  ubuntu@<LIGHTSAIL_IP>:/var/www/offmarketstream/backend/models/damage_yolov8n/best.pt
+```
+
+Production needs `libgl1` (see `bootstrap-server.sh`) and `pip install -r backend/requirements-cv.txt`.

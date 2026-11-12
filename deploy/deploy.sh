@@ -17,6 +17,10 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -q --upgrade pip
 pip install -q -r requirements.txt
+if [ -f requirements-cv.txt ]; then
+  pip install -q -r requirements-cv.txt
+fi
+mkdir -p "$APP_ROOT/backend/models/damage_yolov8n"
 
 echo "==> Frontend"
 cd "$APP_ROOT/frontend"

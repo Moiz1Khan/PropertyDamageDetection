@@ -9,7 +9,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 echo "==> Packages"
 sudo apt-get update -qq
-sudo apt-get install -y -qq git nginx python3-venv python3-pip curl
+sudo apt-get install -y -qq git nginx python3-venv python3-pip curl libgl1 libglib2.0-0
 
 if ! command -v npm >/dev/null 2>&1; then
   echo "==> Node.js 20"

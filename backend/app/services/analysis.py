@@ -14,6 +14,7 @@ from . import deal_engine
 from pathlib import Path
 
 from .image_cv import assess_uploaded_images, paths_from_gallery_urls, scene_summary
+from . import damage_inference
 from . import rentcast
 
 DAMAGE_CATALOG = [
@@ -209,10 +210,18 @@ def run_full_analysis(
     if upload_paths:
         assessment = assess_uploaded_images(upload_paths)
         if assessment["property_like"]:
-            damages, scene_note = detect_damage_for_uploads(
-                upload_paths, address, city, list_price, sqft
-            )
-            stages[1] = f"CV damage scan complete ({scene_note})"
+            if damage_inference.model_available():
+                damages, scene_note = damage_inference.detect_damages_yolo(upload_paths)
+                stages[1] = f"CV damage scan complete ({scene_note})"
+            else:
+                damages, scene_note = detect_damage_for_uploads(
+                    upload_paths, address, city, list_price, sqft
+                )
+                extra_log.append(
+                    "[info] Simulated CV — place best.pt in backend/models/damage_yolov8n/ "
+                    "after training (see ml/README.md)."
+                )
+                stages[1] = f"CV damage scan complete ({scene_note})"
         else:
             stages[1] = "CV upload check — not property photos"
             damages = []
