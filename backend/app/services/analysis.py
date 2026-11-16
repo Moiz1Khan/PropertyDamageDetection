@@ -14,7 +14,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from . import damage_inference, deal_engine, gemini_vision, rehab, rentcast
+from . import deal_engine, rehab, rentcast
 from .damage_pipeline import analyze_photos
 
 # Regional estimate tables (Texas metros only). Used only when live data is missing, and labelled as such.
@@ -145,19 +145,13 @@ def run_full_analysis(
         photos = analyze_photos(gallery_urls, list(image_rooms or []), db)
     findings = [f for p in photos for f in p["findings"]]
     assessed = [p for p in photos if p["status"] == "assessed"]
-    ai_used = sum(1 for p in photos if p["aiUsed"])
-    engines = []
-    if damage_inference.model_available():
-        engines.append("YOLOv8 damage model")
-    if ai_used:
-        engines.append(f"Gemini vision ({ai_used} photo(s))")
     if not gallery_urls:
         log.append("[info] No photos uploaded — damage not assessed")
     elif not assessed:
-        log.append("[warning] Photos could not be assessed (no damage model or AI vision available)")
+        log.append("[warning] Photos could not be assessed (damage model unavailable)")
     else:
         log.append(
-            f"[done] Damage scan: {len(findings)} finding(s) in {len(assessed)} photo(s) using " + " + ".join(engines)
+            f"[done] Damage scan: {len(findings)} finding(s) in {len(assessed)} photo(s) using YOLOv8 damage model"
         )
     for p in photos:
         n = p["index"] + 1
@@ -165,10 +159,10 @@ def run_full_analysis(
             warnings.append(f"Photo {n} does not look like a property photo — skipped.")
         elif p["status"] == "missing":
             warnings.append(f"Photo {n} file is missing on the server.")
-        if p["aiNote"] and p["status"] != "missing" and gemini_vision.configured():
+        if p["aiNote"] and p["status"] != "missing":
             log.append(f"[info] Photo {n}: {p['aiNote']}")
         for r in p["rejectedDetections"]:
-            log.append(f"[info] Photo {n}: AI rejected a YOLO \"{r['yoloClass']}\" box — {r['reason']}")
+            log.append(f"[info] Photo {n}: filtered out a false \"{r['yoloClass']}\" detection — {r['reason']}")
 
     # 2. Rehab
     rehab_est = rehab.estimate(findings, sqft, photos_assessed=bool(assessed))

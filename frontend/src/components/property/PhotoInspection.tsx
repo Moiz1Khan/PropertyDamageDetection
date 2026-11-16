@@ -1,6 +1,6 @@
 import { Badge } from '../ui/Badge'
 import type { ApiDamage, ApiPhotoAnalysis, Box } from '../../lib/api'
-import { ROOM_OPTIONS, SOURCE_LABELS } from '../../lib/rooms'
+import { ROOM_OPTIONS } from '../../lib/rooms'
 
 const severityVariant = { low: 'success', medium: 'warning', high: 'danger' } as const
 const severityColor = { low: '#10b981', medium: '#f59e0b', high: '#ef4444' }
@@ -32,8 +32,8 @@ function BoxOverlay({ box, n, color }: { box: Box; n: number; color: string }) {
 function roomHint(photo: ApiPhotoAnalysis): string {
   if (photo.roomSource === 'user') return 'Room set by you'
   if (photo.roomSource === 'ai')
-    return `Room detected by AI (${Math.round((photo.aiRoomConfidence ?? 0) * 100)}% sure)`
-  if (photo.aiUsed) return "AI couldn't tell the room from this photo — pick one"
+    return `Room detected automatically (${Math.round((photo.aiRoomConfidence ?? 0) * 100)}% sure)`
+  if (photo.aiUsed) return "Couldn't tell the room from this photo — pick one"
   return 'Pick the room for this photo'
 }
 
@@ -50,8 +50,9 @@ function FindingRow({ d, n }: { d: ApiDamage; n: number }) {
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-medium text-black">{d.type}</p>
           <Badge variant={severityVariant[d.severity]}>{d.severity}</Badge>
-          <Badge variant="info">{SOURCE_LABELS[d.source ?? 'legacy'] ?? d.source}</Badge>
-          {d.score != null && <span className="text-xs text-app-muted">YOLO {Math.round(d.score * 100)}%</span>}
+          {d.score != null && (
+            <span className="text-xs text-app-muted">{Math.round(d.score * 100)}% confidence</span>
+          )}
           {d.areaSqft ? <span className="text-xs text-app-muted">~{d.areaSqft} sqft</span> : null}
         </div>
         {d.description && <p className="mt-1 text-xs text-app-muted">{d.description}</p>}
@@ -104,7 +105,7 @@ export function PhotoInspection({
             onChange={(e) => onRoomChange(e.target.value)}
           >
             <option value="">
-              {photo.roomSource === 'ai' ? `Auto (AI: ${photo.room})` : 'Auto (let AI decide)'}
+              {photo.roomSource === 'ai' ? `Auto-detect (${photo.room})` : 'Auto-detect'}
             </option>
             {ROOM_OPTIONS.map((r) => (
               <option key={r} value={r}>
@@ -124,7 +125,7 @@ export function PhotoInspection({
 
         {photo.rejectedDetections?.length > 0 && (
           <p className="text-xs text-app-muted">
-            AI rejected {photo.rejectedDetections.length} YOLO detection(s) as false alarms:{' '}
+            Filtered out {photo.rejectedDetections.length} false detection(s):{' '}
             {photo.rejectedDetections.map((r) => `"${r.yoloClass}" — ${r.reason}`).join('; ')}
           </p>
         )}

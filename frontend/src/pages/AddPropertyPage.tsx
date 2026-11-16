@@ -98,7 +98,7 @@ export function AddPropertyPage() {
         const uploaded = await api.uploadPropertyImages(files)
         galleryUrls = uploaded.images.map((i) => i.url)
       }
-      setStages((s) => [...s, files.length ? 'Inspecting photos with YOLO + AI vision…' : 'Running analysis…'])
+      setStages((s) => [...s, files.length ? 'Inspecting photos with YOLOv8…' : 'Running analysis…'])
       const res = await api.createProperty({
         ...form,
         list_price: Number(form.list_price),
@@ -245,8 +245,8 @@ export function AddPropertyPage() {
 
           <div className="mt-4 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
-            Each photo is checked by our YOLO damage model (cracks, water stains, mold, damp) and AI vision (room type,
-            roof, windows, flooring and other visible damage). Set the room under each photo if you know it.
+            Each photo is inspected by our YOLOv8 damage detection pipeline: cracks, water damage, mold, peeling paint,
+            roof, windows, flooring and more. Set the room under each photo if you know it.
           </div>
 
           <input
@@ -313,7 +313,7 @@ export function AddPropertyPage() {
                     value={rooms[i] ?? ''}
                     onChange={(e) => setRooms((r) => r.map((v, j) => (j === i ? e.target.value : v)))}
                   >
-                    <option value="">Room: auto (AI)</option>
+                    <option value="">Room: auto-detect</option>
                     {ROOM_OPTIONS.map((r) => (
                       <option key={r} value={r}>
                         {r}

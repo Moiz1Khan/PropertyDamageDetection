@@ -14,10 +14,3 @@ export const ROOM_OPTIONS = [
   'Roof',
   'Yard',
 ]
-
-export const SOURCE_LABELS: Record<string, string> = {
-  ai: 'AI vision',
-  yolo: 'YOLO model',
-  'ai+yolo': 'AI + YOLO',
-  legacy: 'Old analysis',
-}

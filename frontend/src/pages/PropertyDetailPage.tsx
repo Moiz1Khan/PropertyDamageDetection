@@ -20,7 +20,6 @@ import {
 import { formatCurrency, formatPercent, strategyLabels } from '../data/mockData'
 import { api, type ApiProperty } from '../lib/api'
 import { PhotoInspection } from '../components/property/PhotoInspection'
-import { SOURCE_LABELS } from '../lib/rooms'
 
 const money = (v: number | null | undefined, suffix = '') => (v == null ? 'n/a' : `${formatCurrency(v)}${suffix}`)
 
@@ -230,7 +229,7 @@ export function PropertyDetailPage() {
             <Card>
               <h2 className="font-medium text-black">Photo Inspection</h2>
               <p className="mt-1 text-sm text-app-muted">
-                Each photo is checked by the YOLO damage model and AI vision. Numbered boxes match the findings. Change a
+                Each photo is inspected by our YOLOv8 damage detection pipeline. Numbered boxes match the findings. Change a
                 photo&apos;s room if it&apos;s wrong — the estimate updates.
               </p>
               <div className="mt-4 space-y-4">
@@ -273,9 +272,8 @@ export function PropertyDetailPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <Badge variant="info">{SOURCE_LABELS[d.source ?? 'legacy'] ?? d.source}</Badge>
                     {d.score != null && (
-                      <span className="text-xs text-app-muted">YOLO {(d.score * 100).toFixed(0)}%</span>
+                      <span className="text-xs text-app-muted">{(d.score * 100).toFixed(0)}% confidence</span>
                     )}
                     <Badge variant={severityVariant[d.severity]}>{d.severity}</Badge>
                   </div>

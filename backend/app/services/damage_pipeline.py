@@ -43,6 +43,8 @@ ROOM_LABELS = {
     "roof": "Roof", "yard": "Yard",
 }
 ROOM_CONFIDENCE_MIN = 0.5
+# User-facing text never names the backend services; details go to the server log.
+DETAIL_UNAVAILABLE = "Detailed scan unavailable for this photo — base detection only"
 NOT_SPECIFIED = "Room not specified"
 
 
@@ -180,9 +182,9 @@ def analyze_photos(urls: list[str], rooms: list[str], db: Session) -> list[dict]
             continue
         j["yolo"] = damage_inference.detect_boxes(j["path"])
         if not ai_on:
-            j["note"] = "AI vision not configured"
+            j["note"] = ""
         elif j["i"] >= settings.gemini_max_images:
-            j["note"] = f"AI vision skipped (limit of {settings.gemini_max_images} photos per analysis)"
+            j["note"] = f"Detailed scan limited to the first {settings.gemini_max_images} photos — base detection only"
         else:
             j["key"] = gemini_vision.cache_key(j["path"])
             j["ai"] = gemini_vision.get_cached(j["key"], db)
@@ -196,10 +198,11 @@ def analyze_photos(urls: list[str], rooms: list[str], db: Session) -> list[dict]
                 try:
                     j["ai"] = fut.result()
                 except gemini_vision.VisionUnavailable as exc:
-                    j["note"] = str(exc)
-                except Exception as exc:  # never let the AI step break the analysis
-                    logger.exception("Gemini analysis failed")
-                    j["note"] = f"AI vision failed ({type(exc).__name__})"
+                    logger.info("Detailed scan unavailable for photo %s: %s", j["i"] + 1, exc)
+                    j["note"] = DETAIL_UNAVAILABLE
+                except Exception:  # never let this step break the analysis
+                    logger.exception("Detailed scan failed")
+                    j["note"] = DETAIL_UNAVAILABLE
         for j in todo:
             if j["ai"] is not None:
                 gemini_vision.store(j["key"], j["ai"], db)

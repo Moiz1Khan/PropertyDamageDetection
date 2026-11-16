@@ -54,12 +54,11 @@ def build_property_pdf(property_data: dict) -> bytes:
     )
     story.append(t)
 
-    story.append(Paragraph("Damage Detection (CV)", h2))
+    story.append(Paragraph("Damage Detection (YOLOv8)", h2))
     damage_rows = [["Type", "Room", "Severity", "Confidence"]]
-    source_names = {"ai": "AI vision", "yolo": "YOLO model", "ai+yolo": "AI + YOLO", "legacy": "—"}
-    damage_rows[0][3] = "Found by"
     for d in property_data.get("damages") or []:
-        damage_rows.append([d["type"], d["room"], d["severity"], source_names.get(d.get("source"), "—")])
+        conf = f"{d['score'] * 100:.0f}%" if d.get("score") is not None else "—"
+        damage_rows.append([d["type"], d["room"], d["severity"], conf])
     if len(damage_rows) == 1:
         damage_rows.append(["None detected", "—", "—", "—"])
     dt = Table(damage_rows, colWidths=[2.2 * inch, 1.5 * inch, 1.2 * inch, 1.2 * inch])

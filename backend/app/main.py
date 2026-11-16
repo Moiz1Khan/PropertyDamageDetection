@@ -69,6 +69,6 @@ def health():
         "status": "ok",
         "app": "OffmarketStream",
         "damageModel": "loaded" if damage_inference.model_available() else "missing",
-        "visionAi": settings.gemini_model if gemini_vision.configured() else "not configured",
+        "detailedScan": "enabled" if gemini_vision.configured() else "disabled",
         "marketData": "rentcast" if rentcast.configured() else "not configured",
     }

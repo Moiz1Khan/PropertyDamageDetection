@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from typing import Any, Literal
 
@@ -141,6 +142,19 @@ class AnalysisResult(BaseModel):
     stages: list[str]
 
 
+_LEGACY_LOG = [
+    (re.compile(r" using .*?Gemini vision \(\d+ photo\(s\)\)"), " using YOLOv8 damage model"),
+    (re.compile(r'AI rejected a YOLO "([^"]+)" box'), r'filtered out a false "\1" detection'),
+    (re.compile(r"AI vision[^\n]*"), "Detailed scan unavailable for this photo — base detection only"),
+]
+
+
+def _public_log_line(line: str) -> str:
+    for pattern, repl in _LEGACY_LOG:
+        line = pattern.sub(repl, line)
+    return line
+
+
 def property_to_out(p) -> PropertyOut:
     nb = p.neighborhood or {}
     return PropertyOut(
@@ -168,7 +182,7 @@ def property_to_out(p) -> PropertyOut:
         damages=[DamageOut(**{k: v for k, v in d.items() if k in DamageOut.model_fields}) for d in (p.damages or [])],
         comps=[CompOut(**c) for c in (p.comps or [])],
         neighborhood=NeighborhoodOut(**{k: nb.get(k) for k in NeighborhoodOut.model_fields}),
-        analysisLog=p.analysis_log or [],
+        analysisLog=[_public_log_line(line) for line in (p.analysis_log or [])],
         imageRooms=list(p.image_rooms or []),
         photoAnalyses=list(p.photo_analyses or []),
         rehabItems=list(p.rehab_items or []),
