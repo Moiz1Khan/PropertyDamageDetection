@@ -120,6 +120,8 @@ def seed_if_empty(db: Session) -> None:
             sqft=raw["sqft"],
             beds=raw["beds"],
             baths=raw["baths"],
+            zip_code=raw["zip_code"],
+            property_type=raw["property_type"],
         )
         db.add(
             Property(
@@ -149,6 +151,12 @@ def seed_if_empty(db: Session) -> None:
                 comps=result["comps"],
                 neighborhood=result["neighborhood"],
                 analysis_log=result["analysis_log"],
+                photo_analyses=result["photo_analyses"],
+                rehab_items=result["rehab_items"],
+                valuation=result["valuation"],
+                warnings=result["warnings"],
+                gallery_images=[],
+                image_rooms=[],
             )
         )
     db.commit()

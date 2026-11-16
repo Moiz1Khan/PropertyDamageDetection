@@ -5,8 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Input, Select, Textarea } from '../components/ui/Input'
 import { Upload, ImagePlus, ArrowLeft, Info, Loader2, X } from 'lucide-react'
 import { api } from '../lib/api'
-
-const roomTags = ['Exterior', 'Kitchen', 'Bathroom', 'Bedroom', 'Living Room', 'Basement', 'Roof']
+import { ROOM_OPTIONS } from '../lib/rooms'
 const MAX_FILES = 20
 const MAX_MB = 10
 
@@ -31,6 +30,7 @@ export function AddPropertyPage() {
   const [stages, setStages] = useState<string[]>([])
   const [files, setFiles] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
+  const [rooms, setRooms] = useState<string[]>([])
   const [form, setForm] = useState({
     address: '1842 Oakwood Drive',
     city: 'Austin',
@@ -58,6 +58,7 @@ export function AddPropertyPage() {
     setFiles((prev) => {
       const merged = [...prev, ...next].slice(0, MAX_FILES)
       setPreviews(merged.map((f) => URL.createObjectURL(f)))
+      setRooms((r) => Array.from({ length: merged.length }, (_, i) => r[i] ?? ''))
       return merged
     })
   }, [])
@@ -68,6 +69,22 @@ export function AddPropertyPage() {
       setPreviews(merged.map((f) => URL.createObjectURL(f)))
       return merged
     })
+    setRooms((r) => r.filter((_, i) => i !== index))
+  }
+
+  const detailsError = (): string => {
+    if (form.address.trim().length < 3) return 'Enter the street address.'
+    if (form.city.trim().length < 2) return 'Enter the city.'
+    if (!(Number(form.list_price) > 1000)) return 'List price must be more than $1,000.'
+    if (!(Number(form.sqft) >= 100)) return 'Square footage must be at least 100.'
+    if (Number(form.beds) < 0 || Number(form.baths) < 0) return 'Bedrooms and bathrooms cannot be negative.'
+    return ''
+  }
+
+  const goToImages = () => {
+    const msg = detailsError()
+    setError(msg)
+    if (!msg) setStep(2)
   }
 
   const runAnalysis = async () => {
@@ -81,7 +98,7 @@ export function AddPropertyPage() {
         const uploaded = await api.uploadPropertyImages(files)
         galleryUrls = uploaded.images.map((i) => i.url)
       }
-      setStages((s) => [...s, 'Queuing CV scan…'])
+      setStages((s) => [...s, files.length ? 'Inspecting photos with YOLO + AI vision…' : 'Running analysis…'])
       const res = await api.createProperty({
         ...form,
         list_price: Number(form.list_price),
@@ -91,6 +108,7 @@ export function AddPropertyPage() {
         year_built: Number(form.year_built) || null,
         lot_size: Number(form.lot_size) || null,
         gallery_image_urls: galleryUrls.length ? galleryUrls : undefined,
+        image_rooms: galleryUrls.length ? rooms.slice(0, galleryUrls.length) : undefined,
         image_url: galleryUrls[0],
         run_analysis: true,
       })
@@ -212,7 +230,7 @@ export function AddPropertyPage() {
             </div>
           </div>
           <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button variant="primary" onClick={() => setStep(2)} className="w-full sm:w-auto">
+            <Button variant="primary" onClick={goToImages} className="w-full sm:w-auto">
               Continue to images
             </Button>
           </div>
@@ -221,13 +239,14 @@ export function AddPropertyPage() {
         <Card>
           <h2 className="font-medium text-black">Property Images</h2>
           <p className="mt-2 text-sm text-app-muted">
-            Upload photos for AI damage detection. You can also run analysis without images — CV will simulate from
-            property attributes.
+            Upload photos for damage detection. Without photos the analysis still runs, but damage is not assessed and
+            rehab covers a cosmetic refresh only.
           </p>
 
           <div className="mt-4 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
-            CV model detects: roof wear, water stains, cracks, peeling paint, HVAC aging, and foundation issues.
+            Each photo is checked by our YOLO damage model (cracks, water stains, mold, damp) and AI vision (room type,
+            roof, windows, flooring and other visible damage). Set the room under each photo if you know it.
           </div>
 
           <input
@@ -276,34 +295,35 @@ export function AddPropertyPage() {
           {previews.length > 0 && (
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {previews.map((src, i) => (
-                <div key={src} className="relative aspect-[4/3] overflow-hidden rounded-xl border border-black/10">
-                  <img src={src} alt="" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black"
-                    onClick={() => removeFile(i)}
-                    aria-label="Remove image"
+                <div key={src} className="space-y-1.5">
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-black/10">
+                    <img src={src} alt="" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black"
+                      onClick={() => removeFile(i)}
+                      aria-label="Remove image"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <select
+                    aria-label={`Room for photo ${i + 1}`}
+                    className="w-full rounded-lg border border-black/10 bg-white px-2 py-1.5 text-xs text-black"
+                    value={rooms[i] ?? ''}
+                    onChange={(e) => setRooms((r) => r.map((v, j) => (j === i ? e.target.value : v)))}
                   >
-                    <X className="h-3 w-3" />
-                  </button>
+                    <option value="">Room: auto (AI)</option>
+                    {ROOM_OPTIONS.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               ))}
             </div>
           )}
-
-          <div className="mt-6">
-            <p className="text-sm font-medium text-app-subtle">Tag rooms (optional)</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {roomTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="cursor-pointer rounded-full border border-black/10 px-3 py-1 text-xs text-app-subtle hover:border-black/20 hover:text-black"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
 
           {stages.length > 0 && (
             <div className="mt-6 space-y-2 rounded-2xl bg-app-elevated p-4 text-sm">

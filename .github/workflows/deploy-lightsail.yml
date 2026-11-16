@@ -15,10 +15,13 @@ jobs:
     steps:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
           host: ${{ secrets.LIGHTSAIL_HOST }}
           username: ${{ secrets.LIGHTSAIL_USER }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          envs: GEMINI_API_KEY
           command_timeout: 25m
           script: |
             set -e
@@ -26,6 +29,32 @@ jobs:
               echo "Server not bootstrapped. Run deploy/bootstrap-server.sh once on the VM."
               exit 1
             fi
+
+            # One-time: add the Gemini key to the server env file only if it is not there yet.
+            # To change the key later, edit the file on the server (or delete the line and redeploy).
+            ENV_FILE=/var/www/offmarketstream/deploy/.env.production
+            sudo touch "$ENV_FILE"
+            if [ -n "$GEMINI_API_KEY" ] && ! sudo grep -q '^GEMINI_API_KEY=' "$ENV_FILE"; then
+              if [ -s "$ENV_FILE" ] && [ "$(sudo tail -c1 "$ENV_FILE")" != "" ]; then echo | sudo tee -a "$ENV_FILE" >/dev/null; fi
+              echo "GEMINI_API_KEY=$GEMINI_API_KEY" | sudo tee -a "$ENV_FILE" >/dev/null
+              echo "Added GEMINI_API_KEY to server env"
+            else
+              echo "GEMINI_API_KEY already set on server (or no secret) - left unchanged"
+            fi
+
+            # One-time: give nginx enough time for photo analysis (default 60s is too short).
+            NGINX_CONF=/etc/nginx/sites-available/offmarketstream
+            if [ -f "$NGINX_CONF" ] && ! sudo grep -q 'proxy_read_timeout' "$NGINX_CONF"; then
+              sudo cp "$NGINX_CONF" /tmp/offmarketstream.nginx.bak
+              sudo sed -i 's|proxy_set_header X-Forwarded-Proto \$scheme;|proxy_set_header X-Forwarded-Proto $scheme;\n        proxy_read_timeout 180s;\n        proxy_send_timeout 180s;|' "$NGINX_CONF"
+              if sudo nginx -t; then
+                echo "nginx timeout raised to 180s"
+              else
+                sudo cp /tmp/offmarketstream.nginx.bak "$NGINX_CONF"
+                echo "nginx change failed the config test - reverted"
+              fi
+            fi
+
             cd /var/www/offmarketstream
             git fetch origin main
             git reset --hard origin/main

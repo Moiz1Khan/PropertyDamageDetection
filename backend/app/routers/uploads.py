@@ -1,20 +1,39 @@
-import tempfile
+import io
 import uuid
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from PIL import Image, UnidentifiedImageError
 
 from ..auth import get_current_user
+from ..config import UPLOAD_ROOT
 from ..models import User
-from ..services.image_cv import property_photo_score
 
 router = APIRouter(tags=["uploads"])
 
-UPLOAD_ROOT = Path(__file__).resolve().parent.parent.parent / "uploads"
 ALLOWED = {".jpg", ".jpeg", ".png", ".webp"}
+FORMAT_EXT = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
 MAX_BYTES = 10 * 1024 * 1024
 MAX_FILES = 20
+
+
+def user_upload_prefix(user_id: str) -> str:
+    return f"/api/uploads/property/{user_id}/"
+
+
+def _check_image(name: str, data: bytes) -> str:
+    """Return the file extension matching the real image format, or raise 400."""
+    try:
+        with Image.open(io.BytesIO(data)) as img:
+            fmt = img.format
+            img.verify()
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
+        raise HTTPException(400, f"{name} is not a valid image file.")
+    ext = FORMAT_EXT.get(fmt or "")
+    if not ext:
+        raise HTTPException(400, f"{name}: unsupported image format {fmt}. Use JPG, PNG or WebP.")
+    return ext
 
 
 @router.post("/uploads/property-images")
@@ -27,37 +46,25 @@ async def upload_property_images(
     if len(files) > MAX_FILES:
         raise HTTPException(400, f"Maximum {MAX_FILES} images allowed")
 
-    batch_id = uuid.uuid4().hex[:12]
-    dest = UPLOAD_ROOT / "property" / batch_id
-    dest.mkdir(parents=True, exist_ok=True)
-
-    urls: list[dict[str, str]] = []
+    # Validate every file before writing anything, so a bad file never leaves a half-saved batch.
+    checked: list[tuple[str, bytes, str]] = []
     for uf in files:
-        ext = Path(uf.filename or "image.jpg").suffix.lower()
-        if ext not in ALLOWED:
-            raise HTTPException(400, f"Unsupported file type: {ext}")
+        name = uf.filename or "image"
+        if Path(name).suffix.lower() not in ALLOWED:
+            raise HTTPException(400, f"Unsupported file type: {name}")
         data = await uf.read()
         if len(data) > MAX_BYTES:
-            raise HTTPException(400, f"{uf.filename} exceeds 10MB limit")
-        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
-            tmp.write(data)
-            tmp_path = Path(tmp.name)
-        try:
-            if property_photo_score(tmp_path) < 0.42:
-                raise HTTPException(
-                    400,
-                    "Image does not look like a property photo. Upload interior or exterior building photos.",
-                )
-        finally:
-            tmp_path.unlink(missing_ok=True)
-        safe_name = f"{uuid.uuid4().hex[:8]}{ext}"
-        path = dest / safe_name
-        path.write_bytes(data)
-        urls.append(
-            {
-                "url": f"/api/uploads/property/{batch_id}/{safe_name}",
-                "name": uf.filename or safe_name,
-            }
-        )
+            raise HTTPException(400, f"{name} exceeds 10MB limit")
+        checked.append((name, data, _check_image(name, data)))
 
-    return {"batchId": batch_id, "images": urls}
+    batch_id = uuid.uuid4().hex[:12]
+    dest = UPLOAD_ROOT / "property" / user.id / batch_id
+    dest.mkdir(parents=True, exist_ok=True)
+
+    images: list[dict[str, str]] = []
+    for name, data, ext in checked:
+        safe_name = f"{uuid.uuid4().hex[:12]}{ext}"
+        (dest / safe_name).write_bytes(data)
+        images.append({"url": f"{user_upload_prefix(user.id)}{batch_id}/{safe_name}", "name": name})
+
+    return {"batchId": batch_id, "images": images}

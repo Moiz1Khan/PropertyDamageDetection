@@ -88,3 +88,14 @@ scp -i deploy/.ssh/github_actions backend/models/damage_yolov8n/best.pt \
 ```
 
 Production needs `libgl1` (see `bootstrap-server.sh`) and `pip install -r backend/requirements-cv.txt`.
+
+## AI vision (Gemini) key
+
+Add to `/var/www/offmarketstream/deploy/.env.production` on the server (never commit it):
+
+```bash
+GEMINI_API_KEY=your-key-here
+```
+
+Then `sudo systemctl restart offmarketstream-api` and check `curl http://127.0.0.1:8000/api/health` shows `"visionAi": "gemini-3.5-flash-lite"`.
+Free tier: about 15 photos/minute and 500/day. Results are cached per photo, so re-running an analysis costs nothing.

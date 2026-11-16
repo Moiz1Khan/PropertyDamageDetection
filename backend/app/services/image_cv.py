@@ -5,29 +5,38 @@ from __future__ import annotations
 import statistics
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
-UPLOAD_ROOT = Path(__file__).resolve().parent.parent.parent / "uploads"
+from ..config import UPLOAD_ROOT
 
 PROPERTY_SCORE_THRESHOLD = 0.42
 
 
+def path_from_upload_url(url: str) -> Path | None:
+    """Map an /api/uploads/... URL to a file inside UPLOAD_ROOT. Rejects anything that escapes it."""
+    if not url:
+        return None
+    if "/api/uploads/" not in url:
+        return None
+    rel = url.split("/api/uploads/", 1)[1].split("?", 1)[0].lstrip("/")
+    root = UPLOAD_ROOT.resolve()
+    p = (root / rel).resolve()
+    if root not in p.parents or not p.is_file():
+        return None
+    return p
+
+
 def paths_from_gallery_urls(urls: list[str]) -> list[Path]:
-    paths: list[Path] = []
-    for url in urls:
-        if not url:
-            continue
-        if url.startswith("/api/uploads/"):
-            rel = url.removeprefix("/api/uploads/").lstrip("/")
-            p = UPLOAD_ROOT / rel
-        elif url.startswith("http") and "/api/uploads/" in url:
-            rel = url.split("/api/uploads/", 1)[1]
-            p = UPLOAD_ROOT / rel
-        else:
-            continue
-        if p.is_file():
-            paths.append(p)
-    return paths
+    return [p for p in (path_from_upload_url(u) for u in urls) if p is not None]
+
+
+def is_valid_image(path: Path) -> bool:
+    try:
+        with Image.open(path) as img:
+            img.verify()
+        return True
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
+        return False
 
 
 def property_photo_score(path: Path) -> float:
@@ -91,33 +100,3 @@ def classify_scene(path: Path) -> str:
     if sky < 0.03:
         return "interior"
     return "unknown"
-
-
-def scene_summary(paths: list[Path]) -> set[str]:
-    scenes: set[str] = set()
-    for p in paths:
-        scenes.add(classify_scene(p))
-    scenes.discard("unknown")
-    return scenes
-
-
-def assess_uploaded_images(paths: list[Path]) -> dict:
-    if not paths:
-        return {"property_like": False, "scores": [], "message": "No image files found"}
-    scores = [property_photo_score(p) for p in paths]
-    avg = sum(scores) / len(scores)
-    prop_like = avg >= PROPERTY_SCORE_THRESHOLD and max(scores) >= PROPERTY_SCORE_THRESHOLD
-    if prop_like:
-        return {
-            "property_like": True,
-            "scores": scores,
-            "message": "Uploaded images appear to be property photos.",
-        }
-    return {
-        "property_like": False,
-        "scores": scores,
-        "message": (
-            "Uploaded images do not look like interior or exterior property photos. "
-            "Please upload room, kitchen, bathroom, or building exterior images."
-        ),
-    }

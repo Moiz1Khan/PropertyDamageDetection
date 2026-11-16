@@ -54,8 +54,28 @@ class Property(Base):
     neighborhood: Mapped[dict] = mapped_column(JSON, default=dict)
     analysis_log: Mapped[list] = mapped_column(JSON, default=list)
     gallery_images: Mapped[list] = mapped_column(JSON, default=list)
+    # User-chosen room tag per gallery image (same order as gallery_images; "" = not tagged)
+    image_rooms: Mapped[list] = mapped_column(JSON, default=list)
+    # Per-photo CV results: room, scene, YOLO boxes, AI findings
+    photo_analyses: Mapped[list] = mapped_column(JSON, default=list)
+    # Itemised rehab estimate lines
+    rehab_items: Mapped[list] = mapped_column(JSON, default=list)
+    # Where ARV / rent / market numbers came from, plus sanity-check results
+    valuation: Mapped[dict] = mapped_column(JSON, default=dict)
+    warnings: Mapped[list] = mapped_column(JSON, default=list)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     owner: Mapped["User"] = relationship(back_populates="properties")
+
+
+class ImageAnalysisCache(Base):
+    """Gemini result per image content hash, so re-running analysis does not spend API quota."""
+
+    __tablename__ = "image_analysis_cache"
+
+    image_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    model: Mapped[str] = mapped_column(String(64))
+    result: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

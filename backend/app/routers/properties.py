@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import Property, User
-from ..schemas import AnalysisResult, DashboardStats, PropertyCreate, PropertyOut, property_to_out
-from ..services.analysis import run_full_analysis
+from ..schemas import AnalysisResult, DashboardStats, PhotoRoomsIn, PropertyCreate, PropertyOut, property_to_out
+from ..services.analysis import pick_image, run_full_analysis
+from ..services.image_cv import path_from_upload_url
+from .uploads import user_upload_prefix
 from ..services.pdf_report import build_property_pdf
 
 router = APIRouter(tags=["properties"])
@@ -58,8 +60,14 @@ def delete_property(
         raise HTTPException(404, "Property not found")
     if user.role != "admin" and prop.owner_id != user.id:
         raise HTTPException(403, "Not allowed")
+    photo_urls = list(prop.gallery_images or [])
     db.delete(prop)
     db.commit()
+    still_used = {u for p in db.query(Property).all() for u in (p.gallery_images or [])}
+    for url in photo_urls:
+        path = path_from_upload_url(url)
+        if path is not None and url not in still_used:
+            path.unlink(missing_ok=True)
 
 
 @router.get("/properties/{property_id}", response_model=PropertyOut)
@@ -76,32 +84,65 @@ def get_property(
     return property_to_out(prop)
 
 
+RESULT_FIELDS = [
+    "rehab_cost", "arv", "monthly_rent", "profit", "roi", "max_offer", "strategy", "rank_score",
+    "damages", "comps", "neighborhood", "analysis_log", "photo_analyses", "rehab_items", "valuation", "warnings",
+]
+
+
+def _clean_rooms(rooms: list[str] | None, n: int) -> list[str]:
+    rooms = [(r or "").strip()[:40] for r in (rooms or [])][:n]
+    return rooms + [""] * (n - len(rooms))
+
+
+def _analyze(prop: Property, db: Session) -> dict:
+    return run_full_analysis(
+        address=prop.address,
+        city=prop.city,
+        state=prop.state,
+        zip_code=prop.zip_code or "",
+        property_type=prop.property_type,
+        list_price=prop.list_price,
+        sqft=prop.sqft,
+        beds=prop.beds,
+        baths=prop.baths,
+        gallery_urls=list(prop.gallery_images or []),
+        image_rooms=list(prop.image_rooms or []),
+        db=db,
+    )
+
+
+def _apply(prop: Property, result: dict) -> None:
+    for field in RESULT_FIELDS:
+        setattr(prop, field, result[field])
+    prop.status = "complete"
+    if not prop.image_url:
+        prop.image_url = (prop.gallery_images or [None])[0] or result["image_url"]
+
+
+def _get_owned(property_id: str, user: User, db: Session) -> Property:
+    prop = db.get(Property, property_id)
+    if not prop:
+        raise HTTPException(404, "Property not found")
+    if user.role != "admin" and prop.owner_id != user.id:
+        raise HTTPException(403, "Not allowed")
+    return prop
+
+
 @router.post("/properties", response_model=AnalysisResult)
 def create_property(
     body: PropertyCreate,
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    prop_id = str(uuid.uuid4())
-    result = None
-    status = "draft"
-    if body.run_analysis:
-        result = run_full_analysis(
-            address=body.address,
-            city=body.city,
-            state=body.state,
-            zip_code=body.zip_code,
-            property_type=body.property_type,
-            list_price=body.list_price,
-            sqft=body.sqft,
-            beds=body.beds,
-            baths=body.baths,
-            gallery_urls=body.gallery_image_urls,
-        )
-        status = "complete"
+    gallery = [u for u in (body.gallery_image_urls or []) if u]
+    prefix = user_upload_prefix(user.id)
+    for url in gallery:
+        if not url.startswith(prefix) or path_from_upload_url(url) is None:
+            raise HTTPException(400, "Photos must be uploaded by you through the upload form.")
 
     prop = Property(
-        id=prop_id,
+        id=str(uuid.uuid4()),
         owner_id=user.id,
         address=body.address,
         city=body.city,
@@ -115,31 +156,24 @@ def create_property(
         year_built=body.year_built,
         lot_size=body.lot_size,
         notes=body.notes,
-        status=status,
-        image_url=body.image_url
-        or ((body.gallery_image_urls or [None])[0])
-        or (result["image_url"] if result else ""),
-        gallery_images=body.gallery_image_urls or [],
-        rehab_cost=result["rehab_cost"] if result else 0,
-        arv=result["arv"] if result else 0,
-        monthly_rent=result["monthly_rent"] if result else 0,
-        profit=result["profit"] if result else 0,
-        roi=result["roi"] if result else 0,
-        max_offer=result["max_offer"] if result else 0,
-        strategy=result["strategy"] if result else "flip",
-        rank_score=result["rank_score"] if result else 0,
-        damages=result["damages"] if result else [],
-        comps=result["comps"] if result else [],
-        neighborhood=result["neighborhood"] if result else {},
-        analysis_log=result["analysis_log"] if result else [],
+        status="draft",
+        image_url=gallery[0] if gallery else "",
+        gallery_images=gallery,
+        image_rooms=_clean_rooms(body.image_rooms, len(gallery)),
+        damages=[], comps=[], neighborhood={}, analysis_log=[], photo_analyses=[], rehab_items=[],
+        valuation={}, warnings=[],
     )
+    stages = ["Property saved as draft"]
+    if body.run_analysis:
+        result = _analyze(prop, db)
+        _apply(prop, result)
+        stages = result["stages"]
+    elif not prop.image_url:
+        prop.image_url = pick_image(prop.address)
     db.add(prop)
     db.commit()
     db.refresh(prop)
-    return AnalysisResult(
-        property=property_to_out(prop),
-        stages=result["stages"] if result else ["Property saved as draft"],
-    )
+    return AnalysisResult(property=property_to_out(prop), stages=stages)
 
 
 @router.post("/properties/{property_id}/analyze", response_model=AnalysisResult)
@@ -148,41 +182,26 @@ def reanalyze(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    prop = db.get(Property, property_id)
-    if not prop:
-        raise HTTPException(404, "Property not found")
-    if user.role != "admin" and prop.owner_id != user.id:
-        raise HTTPException(403, "Not allowed")
-
-    prop.status = "analyzing"
+    prop = _get_owned(property_id, user, db)
+    result = _analyze(prop, db)
+    _apply(prop, result)
     db.commit()
+    db.refresh(prop)
+    return AnalysisResult(property=property_to_out(prop), stages=result["stages"])
 
-    result = run_full_analysis(
-        address=prop.address,
-        city=prop.city,
-        state=prop.state,
-        zip_code=prop.zip_code or "",
-        property_type=prop.property_type,
-        list_price=prop.list_price,
-        sqft=prop.sqft,
-        beds=prop.beds,
-        baths=prop.baths,
-        gallery_urls=list(prop.gallery_images or []),
-    )
-    prop.status = "complete"
-    prop.image_url = prop.image_url or result["image_url"]
-    prop.rehab_cost = result["rehab_cost"]
-    prop.arv = result["arv"]
-    prop.monthly_rent = result["monthly_rent"]
-    prop.profit = result["profit"]
-    prop.roi = result["roi"]
-    prop.max_offer = result["max_offer"]
-    prop.strategy = result["strategy"]
-    prop.rank_score = result["rank_score"]
-    prop.damages = result["damages"]
-    prop.comps = result["comps"]
-    prop.neighborhood = result["neighborhood"]
-    prop.analysis_log = result["analysis_log"]
+
+@router.put("/properties/{property_id}/photo-rooms", response_model=AnalysisResult)
+def set_photo_rooms(
+    property_id: str,
+    body: PhotoRoomsIn,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Correct the room of each photo, then re-run the analysis (AI results are cached, so no extra quota)."""
+    prop = _get_owned(property_id, user, db)
+    prop.image_rooms = _clean_rooms(body.image_rooms, len(prop.gallery_images or []))
+    result = _analyze(prop, db)
+    _apply(prop, result)
     db.commit()
     db.refresh(prop)
     return AnalysisResult(property=property_to_out(prop), stages=result["stages"])

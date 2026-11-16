@@ -152,3 +152,44 @@ def avm_price(payload: dict[str, Any]) -> float | None:
         if val is not None:
             return float(val)
     return None
+
+
+def configured() -> bool:
+    return bool(settings.rentcast_api_key)
+
+
+def fetch_market_stats(zip_code: str) -> dict[str, Any] | None:
+    """ZIP-level market data: median sale price, median rent, and 12-month price change."""
+    zip_code = (zip_code or "").strip()
+    if not settings.rentcast_api_key or not zip_code:
+        return None
+    params = {"zipCode": zip_code, "dataType": "All", "historyRange": 13}
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            r = client.get(f"{BASE}/markets", headers=_headers(), params=params)
+            if r.status_code != 200:
+                logger.warning("RentCast markets API %s: %s", r.status_code, r.text[:300])
+                return None
+            data = r.json()
+    except Exception as exc:
+        logger.warning("RentCast markets request failed: %s", exc)
+        return None
+
+    sale = data.get("saleData") or {}
+    rental = data.get("rentalData") or {}
+    median_price = sale.get("medianPrice")
+    median_rent = rental.get("medianRent")
+    appreciation = None
+    history = sale.get("history") or {}
+    if median_price and isinstance(history, dict) and len(history) >= 2:
+        months = sorted(history.keys())
+        old = (history.get(months[0]) or {}).get("medianPrice")
+        if old:
+            appreciation = round((float(median_price) / float(old) - 1) * 100, 1)
+    if not median_price and not median_rent:
+        return None
+    return {
+        "medianPrice": float(median_price) if median_price else None,
+        "medianRent": float(median_rent) if median_rent else None,
+        "appreciation": appreciation,
+    }

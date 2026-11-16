@@ -19,6 +19,10 @@ import {
 } from 'lucide-react'
 import { formatCurrency, formatPercent, strategyLabels } from '../data/mockData'
 import { api, type ApiProperty } from '../lib/api'
+import { PhotoInspection } from '../components/property/PhotoInspection'
+import { SOURCE_LABELS } from '../lib/rooms'
+
+const money = (v: number | null | undefined, suffix = '') => (v == null ? 'n/a' : `${formatCurrency(v)}${suffix}`)
 
 const severityVariant = {
   low: 'success' as const,
@@ -71,6 +75,23 @@ export function PropertyDetailPage() {
     }
   }
 
+  const changeRoom = async (index: number, room: string) => {
+    if (!id || !property) return
+    const n = property.galleryImages?.length ?? 0
+    const rooms = Array.from({ length: n }, (_, i) => property.imageRooms?.[i] ?? '')
+    rooms[index] = room
+    setBusy(true)
+    setError('')
+    try {
+      const res = await api.setPhotoRooms(id, rooms)
+      setProperty(res.property)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update room')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const remove = async () => {
     if (!id || !property) return
     const label = `${property.address}, ${property.city}`
@@ -91,6 +112,11 @@ export function PropertyDetailPage() {
 
   const totalCost = property.listPrice + property.rehabCost
   const margin = property.arv - totalCost
+  const photos = property.photoAnalyses ?? []
+  const warnings = property.warnings ?? []
+  const val = property.valuation ?? {}
+  const nb = property.neighborhood
+  const nbSrc = val.neighborhoodSources ?? {}
 
   return (
     <div className="space-y-8">
@@ -161,6 +187,17 @@ export function PropertyDetailPage() {
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
+      {warnings.length > 0 && (
+        <div className="space-y-1 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="flex items-center gap-2 font-medium">
+            <AlertTriangle className="h-4 w-4" /> Check before relying on these numbers
+          </p>
+          {warnings.map((w) => (
+            <p key={w}>• {w}</p>
+          ))}
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: 'List Price', value: formatCurrency(property.listPrice) },
@@ -179,13 +216,36 @@ export function PropertyDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <div className="overflow-hidden rounded-2xl border border-black/[0.06] shadow-sm">
-            <img
-              src={property.imageUrl}
-              alt={property.address}
-              className="aspect-[4/3] w-full object-cover sm:aspect-[21/9]"
-            />
-          </div>
+          {photos.length === 0 && (
+            <div className="overflow-hidden rounded-2xl border border-black/[0.06] shadow-sm">
+              <img
+                src={property.imageUrl}
+                alt={property.address}
+                className="aspect-[4/3] w-full object-cover sm:aspect-[21/9]"
+              />
+            </div>
+          )}
+
+          {photos.length > 0 && (
+            <Card>
+              <h2 className="font-medium text-black">Photo Inspection</h2>
+              <p className="mt-1 text-sm text-app-muted">
+                Each photo is checked by the YOLO damage model and AI vision. Numbered boxes match the findings. Change a
+                photo&apos;s room if it&apos;s wrong — the estimate updates.
+              </p>
+              <div className="mt-4 space-y-4">
+                {photos.map((ph) => (
+                  <PhotoInspection
+                    key={ph.index}
+                    photo={ph}
+                    roomValue={property.imageRooms?.[ph.index] ?? ''}
+                    onRoomChange={(room) => changeRoom(ph.index, room)}
+                    disabled={busy}
+                  />
+                ))}
+              </div>
+            </Card>
+          )}
 
           <Card>
             <h2 className="flex items-center gap-2 font-medium text-black">
@@ -193,17 +253,12 @@ export function PropertyDetailPage() {
               Damage Detection (Computer Vision)
             </h2>
             <p className="mt-1 text-sm text-app-muted">
-              {property.damages.length > 0
-                ? `${property.damages.length} issue(s) flagged from uploaded photo type (exterior vs interior)`
-                : 'No structural damage reported for the uploaded images.'}
+              {photos.length === 0
+                ? 'No photos uploaded, so damage was not assessed. Add photos to get a damage-based rehab estimate.'
+                : property.damages.length > 0
+                  ? `${property.damages.length} issue(s) found across ${photos.length} photo(s)`
+                  : `No damage found in ${photos.length} photo(s).`}
             </p>
-            {property.damages.length === 0 &&
-              property.analysisLog?.some((l) => l.includes('[warning]')) && (
-                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  {property.analysisLog.find((l) => l.includes('[warning]'))?.replace('[warning] ', '') ??
-                    'Upload interior or exterior property photos for damage detection.'}
-                </div>
-              )}
             <div className="mt-4 space-y-3">
               {property.damages.map((d, i) => (
                 <div
@@ -212,10 +267,16 @@ export function PropertyDetailPage() {
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-black">{d.type}</p>
-                    <p className="text-xs text-app-muted">{d.room}</p>
+                    <p className="text-xs text-app-muted">
+                      {d.room}
+                      {d.imageIndex != null ? ` · photo ${d.imageIndex + 1}` : ''}
+                    </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span className="text-xs text-app-muted">{(d.score * 100).toFixed(0)}%</span>
+                    <Badge variant="info">{SOURCE_LABELS[d.source ?? 'legacy'] ?? d.source}</Badge>
+                    {d.score != null && (
+                      <span className="text-xs text-app-muted">YOLO {(d.score * 100).toFixed(0)}%</span>
+                    )}
                     <Badge variant={severityVariant[d.severity]}>{d.severity}</Badge>
                   </div>
                 </div>
@@ -242,12 +303,44 @@ export function PropertyDetailPage() {
                 </div>
               ))}
             </div>
+            {val.asIsSource && (
+              <p className="mt-3 text-xs text-app-muted">
+                ARV = current value {money(val.asIsValue)} ({val.asIsSource}) + {money(val.repairsValue)} of repairs.
+                Rent from {val.rentSource}.
+              </p>
+            )}
           </Card>
+
+          {(property.rehabItems?.length ?? 0) > 0 && (
+            <Card>
+              <h2 className="font-medium text-black">Rehab Estimate</h2>
+              {val.rehabNote && <p className="mt-1 text-sm text-amber-700">{val.rehabNote}</p>}
+              <div className="mt-4 space-y-2 text-sm">
+                {property.rehabItems!.map((it) => (
+                  <div key={it.label} className="flex justify-between gap-4 border-b border-black/[0.06] pb-2">
+                    <div className="min-w-0">
+                      <p className="text-black">{it.label}</p>
+                      <p className="text-xs text-app-muted">{it.detail}</p>
+                    </div>
+                    <span className="shrink-0 text-black">{formatCurrency(it.cost)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between pt-1 font-semibold">
+                  <span>Total (rounded)</span>
+                  <span>{formatCurrency(property.rehabCost)}</span>
+                </div>
+              </div>
+            </Card>
+          )}
 
           <Card>
             <h2 className="font-medium text-black">Comparable Properties</h2>
-            <p className="mt-1 text-sm text-app-muted">Sales within 0.5 miles, last 6 months</p>
-            <div className="table-scroll">
+            <p className="mt-1 text-sm text-app-muted">
+              {property.comps.length > 0
+                ? 'Recent sales from RentCast with similar size (±100 sqft)'
+                : 'No comparable sales available for this address (RentCast data missing or no close matches).'}
+            </p>
+            {property.comps.length > 0 && <div className="table-scroll">
               <table className="mt-4 w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="border-b border-black/[0.06] text-left text-app-muted">
@@ -272,7 +365,7 @@ export function PropertyDetailPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </div>}
           </Card>
         </div>
 
@@ -286,8 +379,9 @@ export function PropertyDetailPage() {
               {strategyLabels[property.strategy as keyof typeof strategyLabels] ?? property.strategy}
             </p>
             <p className="mt-2 text-sm text-app-muted">
-              Based on ROI ({formatPercent(property.roi)}), {formatPercent(property.neighborhood.appreciation)} area
-              appreciation, and rental yield of {formatCurrency(property.monthlyRent)}/mo.
+              Based on ROI ({formatPercent(property.roi)}), profit of {formatCurrency(property.profit)},{' '}
+              {nb.appreciation != null ? `${formatPercent(nb.appreciation)} area appreciation, ` : ''}and estimated rent of{' '}
+              {formatCurrency(property.monthlyRent)}/mo.
             </p>
             <div className="mt-4 rounded-xl bg-app-elevated px-4 py-3">
               <p className="text-xs text-app-muted">Rank Score</p>
@@ -305,23 +399,28 @@ export function PropertyDetailPage() {
             </h2>
             <div className="mt-4 space-y-3 text-sm">
               {[
-                { label: 'Median Price', value: formatCurrency(property.neighborhood.medianPrice) },
-                { label: 'Median Rent', value: `${formatCurrency(property.neighborhood.medianRent)}/mo` },
+                { key: 'medianPrice', label: 'Median Price', value: money(nb.medianPrice) },
+                { key: 'medianRent', label: 'Median Rent', value: money(nb.medianRent, '/mo') },
                 {
+                  key: 'appreciation',
                   label: 'YoY Appreciation',
-                  value: formatPercent(property.neighborhood.appreciation),
-                  green: true,
+                  value: nb.appreciation == null ? 'n/a' : formatPercent(nb.appreciation),
+                  green: nb.appreciation != null && nb.appreciation > 0,
                 },
-                { label: 'School Rating', value: `${property.neighborhood.schoolRating}/10` },
+                { key: 'schoolRating', label: 'School Rating', value: nb.schoolRating == null ? 'n/a' : `${nb.schoolRating}/10` },
                 {
+                  key: 'crimeIndex',
                   label: 'Crime Index',
-                  value: String(property.neighborhood.crimeIndex),
-                  warn: property.neighborhood.crimeIndex > 30,
+                  value: nb.crimeIndex == null ? 'n/a' : String(nb.crimeIndex),
+                  warn: (nb.crimeIndex ?? 0) > 30,
                 },
-              ].map(({ label, value, green, warn }) => (
-                <div key={label} className="flex justify-between">
-                  <span className="text-app-muted">{label}</span>
-                  <span className={`${green ? 'text-emerald-600' : warn ? 'text-amber-400' : 'text-black'}`}>
+              ].map(({ key, label, value, green, warn }) => (
+                <div key={label} className="flex justify-between gap-3">
+                  <span className="text-app-muted">
+                    {label}
+                    {nbSrc[key] && <span className="block text-[11px] text-app-muted/80">{nbSrc[key]}</span>}
+                  </span>
+                  <span className={`${green ? 'text-emerald-600' : warn ? 'text-amber-500' : 'text-black'}`}>
                     {value}
                   </span>
                 </div>

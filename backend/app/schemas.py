@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class TokenOut(BaseModel):
@@ -36,8 +36,15 @@ class RegisterIn(BaseModel):
 class DamageOut(BaseModel):
     type: str
     severity: Literal["low", "medium", "high"]
-    score: float
+    score: float | None = None  # YOLO confidence when the detector found it
     room: str
+    category: str = "other"
+    source: str = "legacy"  # ai | yolo | ai+yolo | legacy (old simulated data)
+    imageIndex: int | None = None
+    areaSqft: float | None = None
+    description: str = ""
+    box: list[float] | None = None
+    yoloBox: list[float] | None = None
 
 
 class CompOut(BaseModel):
@@ -50,29 +57,40 @@ class CompOut(BaseModel):
 
 
 class NeighborhoodOut(BaseModel):
-    medianPrice: float
-    medianRent: float
-    crimeIndex: float
-    schoolRating: float
-    appreciation: float
+    medianPrice: float | None = None
+    medianRent: float | None = None
+    crimeIndex: float | None = None
+    schoolRating: float | None = None
+    appreciation: float | None = None
 
 
 class PropertyCreate(BaseModel):
-    address: str
-    city: str
-    state: str = "TX"
-    zip_code: str = ""
+    address: str = Field(min_length=3, max_length=255)
+    city: str = Field(min_length=2, max_length=120)
+    state: str = Field(default="TX", min_length=2, max_length=8)
+    zip_code: str = Field(default="", max_length=16)
     property_type: str = "Single Family"
-    list_price: float
-    sqft: int
-    beds: int
-    baths: float
-    year_built: int | None = None
-    lot_size: int | None = None
-    notes: str | None = None
+    list_price: float = Field(gt=1000, le=100_000_000)
+    sqft: int = Field(ge=100, le=100_000)
+    beds: int = Field(ge=0, le=50)
+    baths: float = Field(ge=0, le=50)
+    year_built: int | None = Field(default=None, ge=1700, le=2100)
+    lot_size: int | None = Field(default=None, ge=0)
+    notes: str | None = Field(default=None, max_length=5000)
     image_url: str | None = None
-    gallery_image_urls: list[str] | None = None
+    gallery_image_urls: list[str] | None = Field(default=None, max_length=20)
+    # Room tag per gallery image (same order); "" = let the AI decide
+    image_rooms: list[str] | None = Field(default=None, max_length=20)
     run_analysis: bool = True
+
+    @field_validator("address", "city", "state", "zip_code")
+    @classmethod
+    def _strip(cls, v: str) -> str:
+        return v.strip()
+
+
+class PhotoRoomsIn(BaseModel):
+    image_rooms: list[str] = Field(max_length=20)
 
 
 class PropertyOut(BaseModel):
@@ -101,6 +119,11 @@ class PropertyOut(BaseModel):
     comps: list[CompOut]
     neighborhood: NeighborhoodOut
     analysisLog: list[str] = []
+    imageRooms: list[str] = []
+    photoAnalyses: list[dict[str, Any]] = []
+    rehabItems: list[dict[str, Any]] = []
+    valuation: dict[str, Any] = {}
+    warnings: list[str] = []
     createdAt: str
     yearBuilt: int | None = None
     notes: str | None = None
@@ -142,16 +165,15 @@ def property_to_out(p) -> PropertyOut:
         maxOffer=p.max_offer,
         strategy=p.strategy,
         rankScore=p.rank_score,
-        damages=[DamageOut(**d) for d in (p.damages or [])],
+        damages=[DamageOut(**{k: v for k, v in d.items() if k in DamageOut.model_fields}) for d in (p.damages or [])],
         comps=[CompOut(**c) for c in (p.comps or [])],
-        neighborhood=NeighborhoodOut(
-            medianPrice=nb.get("medianPrice", 0),
-            medianRent=nb.get("medianRent", 0),
-            crimeIndex=nb.get("crimeIndex", 0),
-            schoolRating=nb.get("schoolRating", 0),
-            appreciation=nb.get("appreciation", 0),
-        ),
+        neighborhood=NeighborhoodOut(**{k: nb.get(k) for k in NeighborhoodOut.model_fields}),
         analysisLog=p.analysis_log or [],
+        imageRooms=list(p.image_rooms or []),
+        photoAnalyses=list(p.photo_analyses or []),
+        rehabItems=list(p.rehab_items or []),
+        valuation=dict(p.valuation or {}),
+        warnings=list(p.warnings or []),
         createdAt=p.created_at.strftime("%Y-%m-%d") if isinstance(p.created_at, datetime) else str(p.created_at),
         yearBuilt=p.year_built,
         notes=p.notes,
